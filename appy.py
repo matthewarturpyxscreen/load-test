@@ -4,7 +4,13 @@ import httpx
 import pandas as pd
 import streamlit as st
 from prometheus_client import Histogram
-
+registry = CollectorRegistry()
+latency_hist = Histogram(
+    "request_latency",
+    "Latency histogram",
+    buckets=[0.05,0.1,0.2,0.4,0.8,1,2,5],
+    registry=registry
+)
 st.title("Premium Load Testing Suite (Async - Safe Testing)")
 
 url = st.text_input("Target HTTPS Website")
