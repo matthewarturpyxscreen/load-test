@@ -3,14 +3,14 @@ import time
 import httpx
 import pandas as pd
 import streamlit as st
-from prometheus_client import Histogram, CollectorRegistry
-import nest_asyncio
 from datetime import datetime
+from collections import deque
+import nest_asyncio
 
 nest_asyncio.apply()
 
 # --- PAGE CONFIG ---
-st.set_page_config(page_title="Premium Load Tester", page_icon="🚀", layout="wide")
+st.set_page_config(page_title="⚡ Extreme Load Tester", page_icon="⚡", layout="wide")
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -18,19 +18,19 @@ st.markdown("""
     .main-header {
         text-align: center;
         padding: 2rem 0;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #FF0080 0%, #FF8C00 100%);
         border-radius: 10px;
         margin-bottom: 2rem;
         color: white;
     }
-    .metric-card {
-        background: #f8f9fa;
+    .extreme-mode {
+        background: linear-gradient(135deg, #FF0000 0%, #8B0000 100%);
         padding: 1rem;
         border-radius: 8px;
-        border-left: 4px solid #667eea;
-    }
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        margin: 1rem 0;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -38,323 +38,355 @@ st.markdown("""
 # --- TITLE ---
 st.markdown("""
     <div class="main-header">
-        <h1>🚀 Premium Load Tester</h1>
-        <p>Advanced Async Load Testing with Real-time Analytics</p>
+        <h1>⚡ EXTREME SPEED LOAD TESTER</h1>
+        <p>Maximum Performance | Zero Overhead | Blazing Fast</p>
     </div>
 """, unsafe_allow_html=True)
 
-# --- SESSION STATE INITIALIZATION ---
-if "registry" not in st.session_state:
-    st.session_state.registry = CollectorRegistry()
-    st.session_state.latency_hist = Histogram(
-        "request_latency",
-        "Latency histogram",
-        buckets=[0.05, 0.1, 0.2, 0.4, 0.8, 1, 2, 5],
-        registry=st.session_state.registry,
-    )
-
+# --- SESSION STATE ---
 if "stop_event" not in st.session_state:
     st.session_state.stop_event = asyncio.Event()
-
 if "test_history" not in st.session_state:
     st.session_state.test_history = []
 
-latency_hist = st.session_state.latency_hist
+# --- SPEED MODE SELECTOR ---
+st.markdown("### ⚙️ Speed Configuration")
+speed_mode = st.radio(
+    "Select Mode:",
+    ["🟢 Normal (Safe)", "🟡 Fast (Aggressive)", "🔴 EXTREME (Maximum Speed)", "💀 INSANE (Use at your own risk)"],
+    horizontal=True
+)
+
+# Pre-configured settings based on mode
+if speed_mode == "🟢 Normal (Safe)":
+    default_requests = 1000
+    default_concurrency = 100
+    default_timeout = 10
+    max_concurrency = 500
+    max_requests = 10000
+elif speed_mode == "🟡 Fast (Aggressive)":
+    default_requests = 5000
+    default_concurrency = 500
+    default_timeout = 5
+    max_concurrency = 2000
+    max_requests = 50000
+elif speed_mode == "🔴 EXTREME (Maximum Speed)":
+    default_requests = 20000
+    default_concurrency = 2000
+    default_timeout = 3
+    max_concurrency = 10000
+    max_requests = 200000
+else:  # INSANE
+    default_requests = 100000
+    default_concurrency = 5000
+    default_timeout = 2
+    max_concurrency = 50000
+    max_requests = 1000000
+
+if speed_mode in ["🔴 EXTREME (Maximum Speed)", "💀 INSANE (Use at your own risk)"]:
+    st.markdown("""
+        <div class="extreme-mode">
+            ⚠️ EXTREME MODE ACTIVATED ⚠️<br>
+            This will generate MASSIVE traffic. Server may crash. Use ONLY on test environments!
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- INPUTS ---
-with st.container():
-    url = st.text_input(
-        "🔗 Target HTTPS URL",
-        placeholder="https://example.com",
-        help="Enter the full URL including https://"
+url = st.text_input("🎯 Target URL", placeholder="https://your-test-server.com")
+
+col1, col2, col3 = st.columns(3)
+with col1:
+    req_total = st.number_input(
+        "📦 Total Requests",
+        min_value=1,
+        max_value=max_requests,
+        value=default_requests,
+        step=1000
     )
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        req_total = st.number_input(
-            "📦 Total Requests",
-            min_value=1,
-            max_value=200000,
-            value=5000,
-            step=500,
-            help="Total number of requests to send"
-        )
-    with col2:
-        concurrency = st.slider(
-            "👥 Concurrent Users",
-            min_value=1,
-            max_value=5000,
-            value=500,
-            help="Number of concurrent connections"
-        )
-    with col3:
-        delay_ms = st.slider(
-            "⏱ Rate Delay (ms)",
-            min_value=0,
-            max_value=500,
-            value=0,
-            help="Delay between requests"
-        )
+with col2:
+    concurrency = st.slider(
+        "🚀 Concurrency",
+        min_value=1,
+        max_value=max_concurrency,
+        value=default_concurrency
+    )
+with col3:
+    timeout = st.number_input(
+        "⏰ Timeout (s)",
+        min_value=1,
+        max_value=30,
+        value=default_timeout
+    )
 
-    col4, col5 = st.columns(2)
-    with col4:
-        timeout = st.number_input(
-            "⏰ Timeout (seconds)",
-            min_value=1,
-            max_value=60,
-            value=10,
-            help="Request timeout"
-        )
-    with col5:
-        update_interval = st.number_input(
-            "📊 Update Interval",
-            min_value=10,
-            max_value=1000,
-            value=50,
-            help="Progress update frequency"
-        )
+# Advanced options
+with st.expander("⚙️ Advanced Settings"):
+    col_a1, col_a2, col_a3 = st.columns(3)
+    with col_a1:
+        keep_alive = st.checkbox("Keep-Alive Connections", value=True)
+        http2 = st.checkbox("Enable HTTP/2", value=True)
+    with col_a2:
+        follow_redirects = st.checkbox("Follow Redirects", value=False)
+        verify_ssl = st.checkbox("Verify SSL", value=True)
+    with col_a3:
+        update_interval = st.number_input("Update Interval", 100, 10000, 2000, 500)
+        collect_response = st.checkbox("Collect Response Body", value=False)
 
-st.warning("⚠️ **Important:** Use this tool ONLY for testing your own domain or with explicit permission.", icon="🔒")
+st.warning("⚠️ **CRITICAL:** Only test YOUR OWN servers or with explicit written permission!", icon="🔥")
 
-
-# --- HELPER FUNCTIONS ---
-async def detect_server_protocol(test_url: str, timeout_val: int):
-    """Detect HTTP version and server information"""
-    try:
-        async with httpx.AsyncClient(http2=True) as client:
-            r = await client.get(test_url, timeout=timeout_val)
-            version = r.http_version
-            server = r.headers.get("server", "Unknown")
-            alt_svc = r.headers.get("alt-svc", "")
-            http3 = "quic" in alt_svc.lower() or "h3" in alt_svc.lower()
-            return {
-                "version": version,
-                "server": server,
-                "http3": http3,
-                "status": r.status_code,
-                "headers_count": len(r.headers)
-            }
-    except Exception as e:
-        return {"error": str(e)}
-
-
-async def bounded_worker(client, results, errors, semaphore, url, delay_ms, timeout_val):
-    """Worker coroutine with error handling"""
+# --- OPTIMIZED WORKER ---
+async def ultra_fast_worker(client, semaphore, url, results_queue, error_count):
+    """Extremely optimized worker - minimal overhead"""
     try:
         async with semaphore:
-            if delay_ms > 0:
-                await asyncio.sleep(delay_ms / 1000)
-            
-            if st.session_state.stop_event.is_set():
-                return
-            
             start = time.perf_counter()
-            resp = await client.get(url, timeout=timeout_val)
+            resp = await client.get(url)
             latency = time.perf_counter() - start
             
-            latency_hist.observe(latency)
-            results.append({
-                "latency": latency,
-                "status": resp.status_code,
-                "size": len(resp.content)
+            # Minimal data collection for speed
+            results_queue.append({
+                "l": latency,  # shortened key
+                "s": resp.status_code
             })
-    except Exception as e:
-        errors.append(str(e))
+    except:
+        error_count[0] += 1  # Use array for atomic increment
 
 
-async def run_load(progress, log_area, status_area, url, req_total, concurrency, delay_ms, timeout_val, update_interval):
-    """Main load testing function with real-time updates"""
-    results = []
-    errors = []
-    semaphore = asyncio.Semaphore(concurrency)
-
-    async with httpx.AsyncClient(http2=True, limits=httpx.Limits(max_connections=concurrency)) as client:
+async def run_extreme_load(url, req_total, concurrency, timeout_val, http2_enabled, 
+                           keep_alive_enabled, follow_redirects_enabled, verify_ssl_enabled,
+                           update_interval_val, progress_bar, status_placeholder):
+    """Extreme performance load testing"""
+    
+    results_queue = deque(maxlen=100000)  # Efficient ring buffer
+    error_count = [0]  # Mutable container for errors
+    
+    # Ultra-optimized client configuration
+    limits = httpx.Limits(
+        max_connections=concurrency * 2,  # Double for better throughput
+        max_keepalive_connections=concurrency * 2 if keep_alive_enabled else 0,
+        keepalive_expiry=60 if keep_alive_enabled else 0
+    )
+    
+    timeout_config = httpx.Timeout(
+        timeout_val, 
+        connect=min(2.0, timeout_val/2),  # Faster connect timeout
+        pool=1.0  # Quick pool timeout
+    )
+    
+    async with httpx.AsyncClient(
+        http2=http2_enabled,
+        limits=limits,
+        timeout=timeout_config,
+        follow_redirects=follow_redirects_enabled,
+        verify=verify_ssl_enabled
+    ) as client:
+        
+        # Create semaphore - this controls actual concurrency
+        semaphore = asyncio.Semaphore(concurrency)
+        
+        # Create all tasks at once for maximum speed
         tasks = [
-            bounded_worker(client, results, errors, semaphore, url, delay_ms, timeout_val)
+            ultra_fast_worker(client, semaphore, url, results_queue, error_count)
             for _ in range(req_total)
         ]
         
-        done = 0
         start_time = time.time()
+        completed = 0
         
+        # Process tasks as they complete
         for coro in asyncio.as_completed(tasks):
             if st.session_state.stop_event.is_set():
                 break
             
             await coro
-            done += 1
+            completed += 1
             
-            if done % update_interval == 0 or done == req_total:
-                progress.progress(done / req_total)
+            # Update UI less frequently for speed
+            if completed % update_interval_val == 0 or completed == req_total:
                 elapsed = time.time() - start_time
-                rps = done / elapsed if elapsed > 0 else 0
+                rps = completed / elapsed if elapsed > 0 else 0
                 
-                log_area.markdown(f"""
-                    **Progress:** {done}/{req_total} requests  
-                    **RPS:** {rps:.2f} req/s  
-                    **Errors:** {len(errors)}
+                progress_bar.progress(min(completed / req_total, 1.0))
+                
+                status_placeholder.markdown(f"""
+                ### ⚡ Live Stats
+                - **Completed:** {completed:,} / {req_total:,}
+                - **RPS:** {rps:,.0f} requests/sec
+                - **Errors:** {error_count[0]:,}
+                - **Success Rate:** {((completed - error_count[0]) / completed * 100):.1f}%
+                - **Elapsed:** {elapsed:.2f}s
                 """)
-                
-                # Real-time metrics
-                if results:
-                    recent = [r["latency"] for r in results[-100:]]
-                    avg_latency = sum(recent) / len(recent)
-                    status_area.metric(
-                        "Avg Latency (last 100)",
-                        f"{avg_latency:.4f}s",
-                        delta=f"{rps:.1f} RPS"
-                    )
-
-    return results, errors
+        
+        total_time = time.time() - start_time
+        
+    return list(results_queue), error_count[0], total_time
 
 
 # --- UI BUTTONS ---
 col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 1])
 with col_btn1:
-    start_btn = st.button("🚀 Start Test", use_container_width=True, type="primary")
+    start_btn = st.button("⚡ START EXTREME TEST", use_container_width=True, type="primary")
 with col_btn2:
-    stop_btn = st.button("🛑 Stop Test", use_container_width=True)
+    stop_btn = st.button("🛑 EMERGENCY STOP", use_container_width=True)
 with col_btn3:
-    if st.button("🗑️ Clear", use_container_width=True):
+    if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.test_history = []
         st.rerun()
 
-
 if stop_btn:
     st.session_state.stop_event.set()
-    st.warning("⚠️ Test stopped by user", icon="🛑")
+    st.error("🛑 EMERGENCY STOP ACTIVATED!", icon="🚨")
 
-
+# --- RUN TEST ---
 if start_btn:
-    if not url.startswith("https://"):
-        st.error("❌ HTTPS protocol required", icon="🔒")
+    if not url or not url.startswith("http"):
+        st.error("❌ Enter a valid URL (http:// or https://)")
         st.stop()
-
-    # Detect protocol
-    with st.spinner("🔍 Analyzing server..."):
-        try:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            server_info = loop.run_until_complete(detect_server_protocol(url, timeout))
-            loop.close()
-        except Exception as e:
-            st.error(f"❌ Failed to connect: {str(e)}")
-            st.stop()
-
-    if "error" in server_info:
-        st.error(f"❌ Connection error: {server_info['error']}")
-        st.stop()
-
-    # Display server info
-    with st.expander("🛰 Server Information", expanded=True):
-        info_col1, info_col2, info_col3 = st.columns(3)
-        with info_col1:
-            st.metric("Server", server_info["server"])
-        with info_col2:
-            protocol = "HTTP/3 🔥" if server_info["http3"] else server_info["version"]
-            st.metric("Protocol", protocol)
-        with info_col3:
-            st.metric("Status Code", server_info["status"])
-
-    # Reset stop event
-    st.session_state.stop_event.clear()
-
-    # Test UI
-    st.markdown("---")
-    st.subheader("🏃 Running Load Test...")
     
-    progress = st.progress(0)
-    log_area = st.empty()
-    status_area = st.empty()
-
-    # Run test
-    t0 = time.time()
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    results, errors = loop.run_until_complete(
-        run_load(progress, log_area, status_area, url, req_total, concurrency, delay_ms, timeout, update_interval)
-    )
-    loop.close()
-    duration = time.time() - t0
-
-    if not results:
-        st.warning("⚠️ No results collected (test may have been stopped)")
+    # Safety confirmation for extreme modes
+    if speed_mode in ["🔴 EXTREME (Maximum Speed)", "💀 INSANE (Use at your own risk)"]:
+        st.error(f"⚠️ You are about to send {req_total:,} requests with {concurrency:,} concurrent connections!")
+        if not st.checkbox("✅ I understand the risks and have permission to test this server"):
+            st.stop()
+    
+    st.session_state.stop_event.clear()
+    
+    st.markdown("---")
+    st.subheader("🔥 EXTREME LOAD TEST IN PROGRESS")
+    
+    progress_bar = st.progress(0)
+    status_placeholder = st.empty()
+    
+    # Run the extreme test
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        results, error_count, duration = loop.run_until_complete(
+            run_extreme_load(
+                url, req_total, concurrency, timeout, http2, keep_alive,
+                follow_redirects, verify_ssl, update_interval,
+                progress_bar, status_placeholder
+            )
+        )
+        
+        loop.close()
+        
+    except Exception as e:
+        st.error(f"💥 Test failed: {str(e)}")
         st.stop()
-
+    
+    if not results:
+        st.warning("⚠️ No results collected")
+        st.stop()
+    
     # Process results
     df = pd.DataFrame(results)
+    df.columns = ['latency', 'status']
     
-    success_rate = (len(results) / req_total) * 100
-    error_rate = (len(errors) / req_total) * 100
+    successful = len(results)
+    total_attempted = req_total
+    success_rate = (successful / total_attempted) * 100
+    error_rate = (error_count / total_attempted) * 100
+    throughput = successful / duration
     
-    p50 = df.latency.quantile(0.5)
-    p90 = df.latency.quantile(0.9)
-    p95 = df.latency.quantile(0.95)
-    p99 = df.latency.quantile(0.99)
-    avg_latency = df.latency.mean()
-    total_data = df['size'].sum() / (1024 * 1024)  # MB
-    throughput = len(results) / duration
-
+    # Calculate percentiles
+    latencies = df['latency'].values
+    p50 = float(pd.Series(latencies).quantile(0.5))
+    p90 = float(pd.Series(latencies).quantile(0.9))
+    p95 = float(pd.Series(latencies).quantile(0.95))
+    p99 = float(pd.Series(latencies).quantile(0.99))
+    avg_latency = float(df['latency'].mean())
+    min_latency = float(df['latency'].min())
+    max_latency = float(df['latency'].max())
+    
     # Save to history
     st.session_state.test_history.append({
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "mode": speed_mode,
         "url": url,
-        "requests": len(results),
+        "requests": successful,
+        "concurrency": concurrency,
         "duration": duration,
         "throughput": throughput,
+        "errors": error_count,
         "p50": p50
     })
-
+    
     # Display results
     st.markdown("---")
-    st.subheader("📊 Test Results")
-
-    # Metrics
-    metric_col1, metric_col2, metric_col3, metric_col4, metric_col5 = st.columns(5)
-    metric_col1.metric("⏳ Duration", f"{duration:.2f}s")
-    metric_col2.metric("✅ Success Rate", f"{success_rate:.1f}%")
-    metric_col3.metric("🚀 Throughput", f"{throughput:.1f} RPS")
-    metric_col4.metric("📦 Data Transfer", f"{total_data:.2f} MB")
-    metric_col5.metric("❌ Errors", len(errors))
-
-    st.markdown("### Latency Percentiles")
-    perc_col1, perc_col2, perc_col3, perc_col4, perc_col5 = st.columns(5)
-    perc_col1.metric("Average", f"{avg_latency:.4f}s")
-    perc_col2.metric("p50 (Median)", f"{p50:.4f}s")
-    perc_col3.metric("p90", f"{p90:.4f}s")
-    perc_col4.metric("p95", f"{p95:.4f}s")
-    perc_col5.metric("p99", f"{p99:.4f}s")
-
+    st.success(f"✅ Test completed in {duration:.2f} seconds!")
+    
+    st.markdown("## 📊 Performance Metrics")
+    
+    # Top metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    col1.metric("⚡ Throughput", f"{throughput:,.0f} RPS")
+    col2.metric("⏱️ Duration", f"{duration:.2f}s")
+    col3.metric("✅ Success", f"{success_rate:.1f}%")
+    col4.metric("📦 Completed", f"{successful:,}")
+    col5.metric("❌ Errors", f"{error_count:,}")
+    
+    # Latency metrics
+    st.markdown("### ⏱️ Latency Analysis")
+    lat_col1, lat_col2, lat_col3, lat_col4, lat_col5, lat_col6, lat_col7 = st.columns(7)
+    lat_col1.metric("Min", f"{min_latency*1000:.1f}ms")
+    lat_col2.metric("Avg", f"{avg_latency*1000:.1f}ms")
+    lat_col3.metric("p50", f"{p50*1000:.1f}ms")
+    lat_col4.metric("p90", f"{p90*1000:.1f}ms")
+    lat_col5.metric("p95", f"{p95*1000:.1f}ms")
+    lat_col6.metric("p99", f"{p99*1000:.1f}ms")
+    lat_col7.metric("Max", f"{max_latency*1000:.1f}ms")
+    
+    # Performance rating
+    if throughput > 10000:
+        perf_rating = "🔥 EXTREME PERFORMANCE"
+        perf_color = "#FF0000"
+    elif throughput > 5000:
+        perf_rating = "⚡ EXCELLENT"
+        perf_color = "#FF8C00"
+    elif throughput > 1000:
+        perf_rating = "✅ GOOD"
+        perf_color = "#00AA00"
+    else:
+        perf_rating = "⚠️ NORMAL"
+        perf_color = "#0066CC"
+    
+    st.markdown(f"""
+        <div style="background: {perf_color}; color: white; padding: 1rem; 
+                    border-radius: 8px; text-align: center; font-size: 1.5rem; 
+                    font-weight: bold; margin: 1rem 0;">
+            {perf_rating}
+        </div>
+    """, unsafe_allow_html=True)
+    
     # Charts
-    st.markdown("### 📈 Latency Analysis")
+    st.markdown("### 📈 Visual Analysis")
+    tab1, tab2, tab3 = st.tabs(["Latency Distribution", "Status Codes", "Time Series"])
     
-    chart_tab1, chart_tab2, chart_tab3 = st.tabs(["Time Series", "Distribution", "Status Codes"])
+    with tab1:
+        st.bar_chart(df['latency'].value_counts().sort_index().head(50))
     
-    with chart_tab1:
-        st.line_chart(df.latency, use_container_width=True)
+    with tab2:
+        status_counts = df['status'].value_counts()
+        st.bar_chart(status_counts)
     
-    with chart_tab2:
-        st.bar_chart(df.latency.value_counts().sort_index(), use_container_width=True)
+    with tab3:
+        # Sample data for visualization if too many points
+        if len(df) > 10000:
+            sample_df = df.sample(n=10000)
+            st.caption("(Showing 10,000 random samples for performance)")
+        else:
+            sample_df = df
+        st.line_chart(sample_df['latency'])
     
-    with chart_tab3:
-        if 'status' in df.columns:
-            status_counts = df['status'].value_counts()
-            st.bar_chart(status_counts, use_container_width=True)
-
-    # Errors
-    if errors:
-        with st.expander(f"❌ Errors ({len(errors)})", expanded=False):
-            error_df = pd.DataFrame(errors, columns=["Error"])
-            st.dataframe(error_df, use_container_width=True)
-
-    # Download results
-    st.markdown("### 💾 Export Results")
+    # Download
+    st.markdown("### 💾 Export")
     csv = df.to_csv(index=False)
     st.download_button(
-        label="📥 Download CSV",
-        data=csv,
-        file_name=f"load_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-        mime="text/csv"
+        "📥 Download Results (CSV)",
+        csv,
+        f"extreme_load_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+        "text/csv"
     )
 
 # Test History
