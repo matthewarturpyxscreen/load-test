@@ -274,10 +274,13 @@ async def penetration_worker(client, stats, base_url, config, worker_id):
         stats['errors']['other'] += 1
 
 
-async def run_penetration_test(progress, log_area, status_area, url, config):
+async def run_penetration_test(progress, log_area, status_area, init_status, url, config):
     """Main penetration test function with optimized batch processing"""
     
     # Initialize stats
+    init_status.info("📊 Initializing statistics collection...")
+    await asyncio.sleep(0.1)
+    
     stats = {
         'count': 0,
         'latencies': deque(maxlen=50000),
@@ -288,6 +291,9 @@ async def run_penetration_test(progress, log_area, status_area, url, config):
     }
     
     # Configure ultra-optimized client
+    init_status.info(f"🔧 Configuring HTTP client (Pool: {config['pool_size']}, HTTP/2: {config['http2']})...")
+    await asyncio.sleep(0.1)
+    
     limits = httpx.Limits(
         max_connections=config['pool_size'],
         max_keepalive_connections=config['pool_size'] if config['keep_alive'] else 0,
@@ -300,6 +306,9 @@ async def run_penetration_test(progress, log_area, status_area, url, config):
         pool=1.0
     )
     
+    init_status.success(f"✅ Client configured! Concurrency: {config['concurrency']}")
+    await asyncio.sleep(0.1)
+    
     async with httpx.AsyncClient(
         http2=config['http2'],
         limits=limits,
@@ -309,6 +318,9 @@ async def run_penetration_test(progress, log_area, status_area, url, config):
     ) as client:
         
         # Use semaphore to control concurrency
+        init_status.info(f"🎯 Creating semaphore (Concurrency limit: {config['concurrency']})...")
+        await asyncio.sleep(0.1)
+        
         semaphore = asyncio.Semaphore(config['concurrency'])
         
         async def bounded_worker(worker_id):
@@ -322,11 +334,25 @@ async def run_penetration_test(progress, log_area, status_area, url, config):
         batch_size = min(config['concurrency'] * 10, 50000)
         total_requests = config['req_total']
         
+        init_status.success(f"🚀 ATTACK INITIATED! Batch size: {batch_size:,} | Total: {total_requests:,}")
+        await asyncio.sleep(0.2)
+        init_status.empty()  # Clear initialization status
+        
         for batch_start in range(0, total_requests, batch_size):
             if st.session_state.stop_event.is_set():
                 break
             
             batch_end = min(batch_start + batch_size, total_requests)
+            batch_num = (batch_start // batch_size) + 1
+            total_batches = (total_requests + batch_size - 1) // batch_size
+            
+            # Show batch progress
+            log_area.markdown(f"""
+                **🔄 Processing Batch {batch_num}/{total_batches}**  
+                Range: {batch_start:,} - {batch_end:,}  
+                Batch size: {batch_end - batch_start:,} requests
+            """)
+            
             batch_tasks = [
                 bounded_worker(i) 
                 for i in range(batch_start, batch_end)
@@ -414,6 +440,9 @@ if start_btn:
     st.markdown("---")
     st.subheader("🎯 PENETRATION IN PROGRESS...")
     
+    init_status = st.empty()
+    init_status.info("⚙️ Initializing attack system...")
+    
     progress = st.progress(0)
     log_area = st.empty()
     status_area = st.empty()
@@ -446,7 +475,7 @@ if start_btn:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         stats, duration = loop.run_until_complete(
-            run_penetration_test(progress, log_area, status_area, url, config)
+            run_penetration_test(progress, log_area, status_area, init_status, url, config)
         )
         loop.close()
     except Exception as e:
