@@ -5,16 +5,26 @@ import pandas as pd
 import streamlit as st
 from prometheus_client import Histogram, CollectorRegistry
 
-st.title("Premium Load Testing Suite (Async - Safe Testing)")
+# --- TITLE ---
+st.markdown("""
+    <h1 style="text-align:center;">🚀 Premium Load Tester</h1>
+    <p style="text-align:center;">Async Load Testing on Your Own Domain</p>
+""", unsafe_allow_html=True)
 
-url = st.text_input("Target HTTPS Website")
-req_total = st.number_input("Total Requests", 1, 200000, 5000)
-concurrency = st.slider("Concurrent Users", 1, 5000, 500)
-delay_ms = st.slider("Rate Delay ms", 0, 500, 0)
+# --- INPUTS ---
+url = st.text_input("🔗 Target HTTPS URL", placeholder="https://example.com")
+col1, col2 = st.columns(2)
+with col1:
+    req_total = st.number_input("📦 Total Requests", 1, 200000, 5000)
+with col2:
+    concurrency = st.slider("👥 Concurrent Users", 1, 5000, 500)
 
-st.write("This tool is intended ONLY for testing your own domain.")
+delay_ms = st.slider("⏱ Rate Delay (ms)", 0, 500, 0)
 
-# --- Create metric once ---
+st.info("⚠️ Use this tool ONLY for testing your own domain.", icon="🔒")
+
+
+# --- METRICS REGISTRY ---
 if "registry" not in st.session_state:
     st.session_state.registry = CollectorRegistry()
     st.session_state.latency_hist = Histogram(
@@ -27,8 +37,15 @@ if "registry" not in st.session_state:
 latency_hist = st.session_state.latency_hist
 
 
+# --- STOP EVENT ---
+if "stop_event" not in st.session_state:
+    st.session_state.stop_event = asyncio.Event()
+
+
 async def worker(client, results):
     await asyncio.sleep(delay_ms/1000)
+    if st.session_state.stop_event.is_set():
+        return
     start = time.perf_counter()
     resp = await client.get(url, timeout=5.0)
     latency = time.perf_counter() - start
@@ -36,26 +53,52 @@ async def worker(client, results):
     results.append(latency)
 
 
-async def run():
+async def run(progress, log_area):
     results = []
-    async with httpx.AsyncClient(http2=True) as client:
+    async with httpx.AsyncClient() as client:
         tasks = [worker(client, results) for _ in range(req_total)]
-        for i, f in enumerate(asyncio.as_completed(tasks)):
-            await f
-            if i % 100 == 0:
-                st.write(f"... processed {i}")
+        done = 0
+
+        for coro in asyncio.as_completed(tasks):
+            if st.session_state.stop_event.is_set():
+                break
+            await coro
+            done += 1
+            if done % 50 == 0:
+                progress.progress(done/req_total)
+                log_area.write(f"▶ {done}/{req_total} processed")
     return results
 
 
-if st.button("Start Test"):
+# --- UI BUTTONS ---
+start_btn = st.button("🚀 Start Test", use_container_width=True)
+stop_btn = st.button("🛑 Stop", use_container_width=True)
+
+
+if stop_btn:
+    st.session_state.stop_event.set()
+    st.warning("Stopped!", icon="🛑")
+
+
+if start_btn:
     if not url.startswith("https://"):
-        st.error("Only HTTPS allowed")
+        st.error("HTTPS only")
         st.stop()
 
+    # reset stop
+    st.session_state.stop_event.clear()
+
+    progress = st.progress(0)
+    log_area = st.empty()
+
     st.write("Running load test...")
-    start = time.time()
-    results = asyncio.run(run())
-    total = time.time() - start
+    t0 = time.time()
+    results = asyncio.run(run(progress, log_area))
+    duration = time.time() - t0
+
+    if not results:
+        st.write("No results (Stopped)")
+        st.stop()
 
     df = pd.DataFrame(results, columns=["latency"])
 
@@ -63,10 +106,14 @@ if st.button("Start Test"):
     p90 = df.latency.quantile(0.9)
     p99 = df.latency.quantile(0.99)
 
-    st.subheader("Metrics")
-    st.write(f"Total time: {total:.2f}s")
-    st.write(f"p50: {p50:.4f}s")
-    st.write(f"p90: {p90:.4f}s")
-    st.write(f"p99: {p99:.4f}s")
+    st.markdown("---")
 
+    # CARD STYLE
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("⏳ Total Time", f"{duration:.2f}s")
+    c2.metric("p50", f"{p50:.4f}s")
+    c3.metric("p90", f"{p90:.4f}s")
+    c4.metric("p99", f"{p99:.4f}s")
+
+    st.subheader("📊 Latency Chart")
     st.line_chart(df.latency)
