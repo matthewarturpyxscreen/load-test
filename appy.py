@@ -380,18 +380,6 @@ if start_btn:
 # Final confirmation
     st.error(f"🎯 INITIATING PENETRATION: {req_total:,} requests × {concurrency:,} concurrent")
     
-    if "confirmed" not in st.session_state:
-        st.session_state.confirmed = False
-    
-    confirm = st.checkbox("⚠️ I have EXPLICIT WRITTEN PERMISSION to test this server", 
-                         key="permission_checkbox")
-    
-    if not confirm:
-        st.warning("⚠️ You must confirm you have permission before proceeding")
-        st.stop()
-    
-    st.session_state.confirmed = True
-    
     # Show active techniques
     st.markdown("### 🔓 Active Bypass Techniques:")
     techniques = []
