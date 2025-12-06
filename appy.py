@@ -4,6 +4,8 @@ import httpx
 import pandas as pd
 import streamlit as st
 from prometheus_client import Histogram, CollectorRegistry
+import nest_asyncio
+nest_asyncio.apply()
 
 # --- TITLE ---
 st.markdown("""
@@ -42,21 +44,36 @@ if "stop_event" not in st.session_state:
     st.session_state.stop_event = asyncio.Event()
 
 
-async def worker(client, results):
-    await asyncio.sleep(delay_ms/1000)
-    if st.session_state.stop_event.is_set():
-        return
-    start = time.perf_counter()
-    resp = await client.get(url, timeout=5.0)
-    latency = time.perf_counter() - start
-    latency_hist.observe(latency)
-    results.append(latency)
-
-
-async def run(progress, log_area):
-    results = []
+async def detect_server_protocol(test_url: str):
+    """Detect HTTP version and server header"""
     async with httpx.AsyncClient() as client:
-        tasks = [worker(client, results) for _ in range(req_total)]
+        r = await client.get(test_url, timeout=5)
+        version = r.http_version  # 'HTTP/1.1' or 'HTTP/2'
+        server = r.headers.get("server", "Unknown")
+        alt_svc = r.headers.get("alt-svc", "")
+        # detect HTTP/3 if alt-svc contains quic
+        http3 = "quic" in alt_svc.lower()
+        return version, server, http3
+
+
+async def bounded_worker(client, results, semaphore):
+    async with semaphore:
+        await asyncio.sleep(delay_ms/1000)
+        if st.session_state.stop_event.is_set():
+            return
+        start = time.perf_counter()
+        resp = await client.get(url, timeout=5.0)
+        latency = time.perf_counter() - start
+        latency_hist.observe(latency)
+        results.append(latency)
+
+
+async def run_load(progress, log_area):
+    results = []
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async with httpx.AsyncClient(http2=True) as client:
+        tasks = [bounded_worker(client, results, semaphore) for _ in range(req_total)]
         done = 0
 
         for coro in asyncio.as_completed(tasks):
@@ -65,8 +82,9 @@ async def run(progress, log_area):
             await coro
             done += 1
             if done % 50 == 0:
-                progress.progress(done/req_total)
-                log_area.write(f"▶ {done}/{req_total} processed")
+                progress.progress(done / req_total)
+                log_area.markdown(f"▶ {done}/{req_total} processed")
+
     return results
 
 
@@ -85,7 +103,25 @@ if start_btn:
         st.error("HTTPS only")
         st.stop()
 
-    # reset stop
+    # Detect protocol before testing
+    with st.spinner("Checking server protocol..."):
+        try:
+            version, server, http3 = asyncio.get_event_loop().run_until_complete(
+                detect_server_protocol(url)
+            )
+        except Exception:
+            st.error("Failed to check protocol")
+            st.stop()
+
+    # Display protocol info
+    with st.expander("🛰 Server Info"):
+        st.write(f"**Server:** {server}")
+        if http3:
+            st.markdown("**Protocol:** HTTP/3 (QUIC) 🔥")
+        else:
+            st.markdown(f"**Protocol:** {version}")
+
+    # Reset stop
     st.session_state.stop_event.clear()
 
     progress = st.progress(0)
@@ -93,7 +129,8 @@ if start_btn:
 
     st.write("Running load test...")
     t0 = time.time()
-    results = asyncio.run(run(progress, log_area))
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(run_load(progress, log_area))
     duration = time.time() - t0
 
     if not results:
@@ -108,7 +145,6 @@ if start_btn:
 
     st.markdown("---")
 
-    # CARD STYLE
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("⏳ Total Time", f"{duration:.2f}s")
     c2.metric("p50", f"{p50:.4f}s")
