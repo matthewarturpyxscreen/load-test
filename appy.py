@@ -3,14 +3,8 @@ import time
 import httpx
 import pandas as pd
 import streamlit as st
-from prometheus_client import Histogram
-registry = CollectorRegistry()
-latency_hist = Histogram(
-    "request_latency",
-    "Latency histogram",
-    buckets=[0.05,0.1,0.2,0.4,0.8,1,2,5],
-    registry=registry
-)
+from prometheus_client import Histogram, CollectorRegistry
+
 st.title("Premium Load Testing Suite (Async - Safe Testing)")
 
 url = st.text_input("Target HTTPS Website")
@@ -20,11 +14,18 @@ delay_ms = st.slider("Rate Delay ms", 0, 500, 0)
 
 st.write("This tool is intended ONLY for testing your own domain.")
 
-latency_hist = Histogram(
-    "request_latency",
-    "Latency histogram",
-    buckets=[0.05,0.1,0.2,0.4,0.8,1,2,5]
-)
+# --- Create metric once ---
+if "registry" not in st.session_state:
+    st.session_state.registry = CollectorRegistry()
+    st.session_state.latency_hist = Histogram(
+        "request_latency",
+        "Latency histogram",
+        buckets=[0.05,0.1,0.2,0.4,0.8,1,2,5],
+        registry=st.session_state.registry,
+    )
+
+latency_hist = st.session_state.latency_hist
+
 
 async def worker(client, results):
     await asyncio.sleep(delay_ms/1000)
@@ -33,6 +34,7 @@ async def worker(client, results):
     latency = time.perf_counter() - start
     latency_hist.observe(latency)
     results.append(latency)
+
 
 async def run():
     results = []
@@ -44,12 +46,13 @@ async def run():
                 st.write(f"... processed {i}")
     return results
 
+
 if st.button("Start Test"):
     if not url.startswith("https://"):
-        st.error("https only")
+        st.error("Only HTTPS allowed")
         st.stop()
 
-    st.write("Running...")
+    st.write("Running load test...")
     start = time.time()
     results = asyncio.run(run())
     total = time.time() - start
