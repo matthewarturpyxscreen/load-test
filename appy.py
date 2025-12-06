@@ -275,7 +275,7 @@ async def penetration_worker(client, stats, base_url, config, worker_id):
 
 
 async def run_penetration_test(progress, log_area, status_area, url, config):
-    """Main penetration test function"""
+    """Main penetration test function with optimized batch processing"""
     
     # Initialize stats
     stats = {
@@ -308,49 +308,64 @@ async def run_penetration_test(progress, log_area, status_area, url, config):
         verify=config['verify_ssl']
     ) as client:
         
-        # Create all tasks
-        tasks = [
-            penetration_worker(client, stats, url, config, i)
-            for i in range(config['req_total'])
-        ]
+        # Use semaphore to control concurrency
+        semaphore = asyncio.Semaphore(config['concurrency'])
+        
+        async def bounded_worker(worker_id):
+            async with semaphore:
+                return await penetration_worker(client, stats, url, config, worker_id)
         
         start_time = time.time()
         done = 0
         
-        # Process tasks
-        for coro in asyncio.as_completed(tasks):
+        # Process in batches to avoid memory overhead
+        batch_size = min(config['concurrency'] * 10, 50000)
+        total_requests = config['req_total']
+        
+        for batch_start in range(0, total_requests, batch_size):
             if st.session_state.stop_event.is_set():
                 break
             
-            await coro
-            done += 1
+            batch_end = min(batch_start + batch_size, total_requests)
+            batch_tasks = [
+                bounded_worker(i) 
+                for i in range(batch_start, batch_end)
+            ]
             
-            if done % config['update_interval'] == 0 or done == config['req_total']:
-                progress.progress(min(done / config['req_total'], 1.0))
-                elapsed = time.time() - start_time
-                rps = done / elapsed if elapsed > 0 else 0
+            # Process batch
+            for coro in asyncio.as_completed(batch_tasks):
+                if st.session_state.stop_event.is_set():
+                    break
                 
-                total_errors = sum(stats['errors'].values())
-                success_rate = ((done - total_errors) / done * 100) if done > 0 else 0
-                bypass_rate = (stats['cache_bypass'] / done * 100) if done > 0 else 0
+                await coro
+                done += 1
                 
-                log_area.markdown(f"""
-                    **Progress:** {done:,}/{config['req_total']:,} ({done/config['req_total']*100:.1f}%)  
-                    **Speed:** {rps:,.0f} RPS  
-                    **Success:** {success_rate:.1f}%  
-                    **Cache Bypass:** {bypass_rate:.1f}% 🔥  
-                    **Errors:** {total_errors:,}
-                """)
-                
-                # Live latency
-                if stats['latencies']:
-                    recent = list(stats['latencies'])[-100:]
-                    avg = sum(recent) / len(recent)
-                    status_area.metric(
-                        "Avg Latency (Last 100)",
-                        f"{avg*1000:.0f}ms",
-                        delta=f"{rps:,.0f} RPS"
-                    )
+                if done % config['update_interval'] == 0 or done == total_requests:
+                    progress.progress(min(done / total_requests, 1.0))
+                    elapsed = time.time() - start_time
+                    rps = done / elapsed if elapsed > 0 else 0
+                    
+                    total_errors = sum(stats['errors'].values())
+                    success_rate = ((done - total_errors) / done * 100) if done > 0 else 0
+                    bypass_rate = (stats['cache_bypass'] / done * 100) if done > 0 else 0
+                    
+                    log_area.markdown(f"""
+                        **Progress:** {done:,}/{total_requests:,} ({done/total_requests*100:.1f}%)  
+                        **Speed:** {rps:,.0f} RPS  
+                        **Success:** {success_rate:.1f}%  
+                        **Cache Bypass:** {bypass_rate:.1f}% 🔥  
+                        **Errors:** {total_errors:,}
+                    """)
+                    
+                    # Live latency
+                    if stats['latencies']:
+                        recent = list(stats['latencies'])[-100:]
+                        avg = sum(recent) / len(recent)
+                        status_area.metric(
+                            "Avg Latency (Last 100)",
+                            f"{avg*1000:.0f}ms",
+                            delta=f"{rps:,.0f} RPS"
+                        )
     
     return stats, time.time() - start_time
 
@@ -377,8 +392,10 @@ if start_btn:
         st.error("❌ Invalid URL")
         st.stop()
     
-# Final confirmation
+    # Final confirmation
     st.error(f"🎯 INITIATING PENETRATION: {req_total:,} requests × {concurrency:,} concurrent")
+    
+    st.session_state.stop_event.clear()
     
     # Show active techniques
     st.markdown("### 🔓 Active Bypass Techniques:")
