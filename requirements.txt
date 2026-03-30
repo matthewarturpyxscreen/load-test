@@ -1,5 +1,11 @@
+aiohttp
+aiohttp-socks
 streamlit
-httpx[http2]
 pandas
-prometheus_client
-nest_asyncio
+numpy
+requests
+fake-useragent
+cloudscraper
+psutil
+aiohttp>=3.8.0
+aiohttp-socks>=0.7.0
